@@ -1,0 +1,9 @@
+.git
+.local
+.vs
+.env
+.env.*
+**/bin
+**/obj
+Gamertab.Tests
+TestResults

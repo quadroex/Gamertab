@@ -1,0 +1,32 @@
+name: gamertab
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: gamertab
+      POSTGRES_USER: gamertab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run dev.ps1 up first}
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gamertab -d gamertab"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  app:
+    profiles: ["full"]
+    build: .
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Gamertab: Host=db;Database=gamertab;Username=gamertab;Password=${POSTGRES_PASSWORD}
+      Igdb__ClientId: ${IGDB_CLIENT_ID:-}
+      Igdb__ClientSecret: ${IGDB_CLIENT_SECRET:-}
+    ports:
+      - "127.0.0.1:5180:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  database:

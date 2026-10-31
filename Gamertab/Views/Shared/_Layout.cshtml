@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Your games, next discoveries and updates in one place." />
+    <title>@ViewData["Title"] · Gamertab</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="brand" asp-controller="Games" asp-action="Index"><span class="brand-mark">g</span>Gamertab<span class="brand-dot">.</span></a>
+            <nav class="main-nav" aria-label="Main navigation">
+                <a asp-controller="Games" asp-action="Index">Browse</a>
+                <a asp-controller="Library" asp-action="Index">My library</a>
+                <a asp-controller="Collections" asp-action="Index">Collections</a>
+                <a asp-controller="Library" asp-action="Recommendations">For you</a>
+            </nav>
+            <div class="account-nav">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="account-name">@User.Identity.Name</span>
+                    <form asp-controller="Account" asp-action="Logout" method="post"><button class="quiet-button" type="submit">Sign out</button></form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login">Sign in</a>
+                    <a class="btn btn-accent btn-sm" asp-controller="Account" asp-action="Register">Get started</a>
+                }
+            </div>
+        </div>
+    </header>
+    <main class="container main-content">
+        @if (TempData["Message"] is string message)
+        {
+            <div class="notice" role="status">@message</div>
+        }
+        @RenderBody()
+    </main>
+    <footer class="container site-footer"><span>Gamertab · Keep your next adventure close.</span><span>Game data from IGDB. News from Steam.</span></footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

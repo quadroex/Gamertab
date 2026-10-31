@@ -1,0 +1,53 @@
+@model LibraryPage
+@{
+    ViewData["Title"] = "My library";
+}
+
+<div class="section-heading page-heading">
+    <div>
+        <p class="eyebrow accent">Your games, your pace</p>
+        <h1>My library.</h1>
+    </div>
+    <a class="btn btn-accent" asp-controller="Discover" asp-action="Index">Find a game +</a>
+</div>
+<nav class="status-tabs" aria-label="Library status">
+    <a asp-action="Index" class="@(string.IsNullOrEmpty(Model.Status) ? "selected" : "")">All games</a>
+    @foreach (var status in Enum.GetValues<PlayStatus>())
+    {
+        <a asp-action="Index" asp-route-status="@status" class="@(Model.Status == status.ToString() ? "selected" : "")">@(status == PlayStatus.OnHold ? "On hold" : status)</a>
+    }
+</nav>
+@if (Model.Entries.Count == 0)
+{
+    <div class="empty-state">
+        <h2>A little room for your next adventure.</h2>
+        <p>Add a game to start keeping track of what you play.</p>
+        <a class="btn btn-accent" asp-controller="Games" asp-action="Index">Browse games</a>
+    </div>
+}
+@foreach (var entry in Model.Entries)
+{
+    <article class="library-row">
+        <a asp-controller="Games" asp-action="Details" asp-route-id="@entry.GameId">
+            <img src="@entry.Game.CoverUrl" alt="@entry.Game.Name cover" loading="lazy" />
+        </a>
+        <div class="library-copy">
+            <span class="eyebrow">@(entry.Status == PlayStatus.OnHold ? "On hold" : entry.Status)@(entry.CompletedOn.HasValue ? $" · Finished {entry.CompletedOn:dd MMM yyyy}" : "")</span>
+            <h2><a asp-controller="Games" asp-action="Details" asp-route-id="@entry.GameId">@entry.Game.Name</a></h2>
+            @if (!string.IsNullOrEmpty(entry.Notes))
+            {
+                <p>@entry.Notes</p>
+            }
+        </div>
+        <div class="library-actions">
+            @if (entry.PersonalRating.HasValue)
+            {
+                <span class="personal-rating">@entry.PersonalRating.Value.ToString("0.#")<small>/10</small></span>
+            }
+            <a asp-action="Edit" asp-route-id="@entry.Id" class="btn btn-subtle">Edit</a>
+            <form asp-action="Delete" asp-route-id="@entry.Id" method="post">
+                <button class="quiet-button" type="submit">Remove</button>
+            </form>
+        </div>
+    </article>
+}

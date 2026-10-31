@@ -1,0 +1,35 @@
+@model List<GameCollection>
+@{
+    ViewData["Title"] = "Collections";
+}
+
+<div class="section-heading page-heading">
+    <div>
+        <p class="eyebrow accent">A little order, a lot of possibilities</p>
+        <h1>Your collections.</h1>
+    </div>
+    <a asp-action="Create" class="btn btn-accent">New collection +</a>
+</div>
+@if (Model.Count == 0)
+{
+    <div class="empty-state">
+        <h2>Start a collection.</h2>
+        <p>A weekend shortlist, co-op favourites or games worth replaying.</p>
+        <a class="btn btn-accent" asp-action="Create">Create collection</a>
+    </div>
+}
+<div class="game-grid">
+    @foreach (var collection in Model)
+    {
+        <article class="collection-card">
+            @if (!string.IsNullOrEmpty(collection.CoverUrl))
+            {
+                <img src="@collection.CoverUrl" alt="@collection.Name cover" loading="lazy" />
+            }
+            <p class="eyebrow accent">@collection.Items.Count games</p>
+            <h2><a asp-action="Details" asp-route-id="@collection.Id">@collection.Name</a></h2>
+            <p class="muted">@collection.Description</p>
+            <a class="text-link" asp-action="Details" asp-route-id="@collection.Id">Open collection ↗</a>
+        </article>
+    }
+</div>

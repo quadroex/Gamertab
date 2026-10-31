@@ -1,0 +1,73 @@
+@model CatalogPage
+@{
+    ViewData["Title"] = "Find your next game";
+}
+
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow accent">A place for your games</p>
+        <h1>Less scrolling.<br />More <span>good games.</span></h1>
+        <p class="hero-description">Keep track of what you play, find your next favourite and catch the updates that matter.</p>
+        <a asp-controller="Discover" asp-action="Index" class="btn btn-accent">Discover games <span aria-hidden="true">↗</span></a>
+    </div>
+    <div class="hero-panel">
+        <span class="panel-label">YOUR NEXT CHAPTER</span>
+        <div class="hero-orbit">
+            <span class="orbit-one"></span>
+            <span class="orbit-two"></span>
+            <span class="orbit-core">g</span>
+        </div>
+        <p>A library that grows<br />with your taste.</p>
+        <span class="panel-caption">PLAY · DISCOVER · REPEAT</span>
+    </div>
+</section>
+<section>
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Make room for something new</p>
+            <h2>Browse the catalogue</h2>
+        </div>
+        <a class="text-link" asp-controller="Discover" asp-action="Index">Search IGDB ↗</a>
+    </div>
+    <form method="get" class="filter-bar" asp-action="Index">
+        <label class="visually-hidden" for="catalog-query">Search catalogue</label>
+        <input id="catalog-query" name="q" value="@Model.Query" placeholder="Search your catalogue..." class="form-control" maxlength="100" />
+        <label class="visually-hidden" for="genre">Genre</label>
+        <select id="genre" name="genre" class="form-select">
+            <option value="">All genres</option>
+            @foreach (var genre in new[] { "Action", "Adventure", "Puzzle", "Role-playing", "Horror", "Simulator" })
+            {
+                <option value="@genre" selected="@(Model.Genre == genre)">@genre</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-subtle">Find games</button>
+    </form>
+    @if (Model.Games.Count == 0)
+    {
+        <div class="empty-state">
+            <h3>No games found</h3>
+            <p>Try another title or discover more games through IGDB.</p>
+            <a asp-controller="Discover" asp-action="Index" asp-route-q="@Model.Query" class="btn btn-accent">Search IGDB</a>
+        </div>
+    }
+    <div class="game-grid">
+        @foreach (var game in Model.Games)
+        {
+            <partial name="_GameCard" model="game" />
+        }
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="pagination-row" aria-label="Catalogue pages">
+            @if (Model.Page > 1)
+            {
+                <a asp-route-page="@(Model.Page - 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Previous</a>
+            }
+            <span>Page @Model.Page of @Model.TotalPages</span>
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a asp-route-page="@(Model.Page + 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Next</a>
+            }
+        </nav>
+    }
+</section>

@@ -1,0 +1,25 @@
+@model CollectionInput
+@{
+    var creating = Context.Request.RouteValues["action"]?.ToString() == "Create";
+    ViewData["Title"] = creating ? "New collection" : "Edit collection";
+}
+
+<a class="back-link" asp-action="Index">← Collections</a>
+<section class="form-panel">
+    <p class="eyebrow accent">Made by you</p>
+    <h1>@ViewData["Title"]</h1>
+    <form method="post" asp-action="@(creating ? "Create" : "Edit")" asp-route-id="@Context.Request.RouteValues["id"]">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" placeholder="Games for a rainy weekend" />
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <label asp-for="CoverUrl" class="form-label">Cover image URL</label>
+        <input asp-for="CoverUrl" class="form-control" placeholder="https://..." />
+        <p class="form-hint">Optional. Use a direct HTTPS link to an image.</p>
+        <div class="action-row">
+            <button type="submit" class="btn btn-accent">Save collection</button>
+            <a class="btn btn-subtle" asp-action="Index">Cancel</a>
+        </div>
+    </form>
+</section>

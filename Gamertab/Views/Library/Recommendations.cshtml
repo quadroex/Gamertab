@@ -1,0 +1,45 @@
+@model List<Recommendation>
+@{
+    ViewData["Title"] = "For you";
+}
+
+<div class="page-heading">
+    <p class="eyebrow accent">Follow your curiosity</p>
+    <h1>Your next favourite?</h1>
+    <p class="muted">Suggestions based on the genres, themes and game modes in your library.</p>
+</div>
+@if (Model.Count == 0)
+{
+    <div class="empty-state">
+        <h2>Give us a starting point.</h2>
+        <p>Add games you like and rate a favourite to build your recommendations.</p>
+        <a class="btn btn-accent" asp-controller="Library" asp-action="Index">My library</a>
+    </div>
+}
+<div class="game-grid">
+    @foreach (var item in Model)
+    {
+        <article class="game-card">
+            <div class="game-art">
+                <img src="@item.Game.CoverUrl" alt="@item.Game.Name cover" loading="lazy" />
+                <span class="art-shade"></span>
+            </div>
+            <div class="game-copy">
+                <p class="eyebrow accent">Picked for you</p>
+                <h2>@item.Game.Name</h2>
+                <p class="card-summary">@item.Reason</p>
+                @if (item.Game.Id > 0)
+                {
+                    <a class="btn btn-subtle" asp-controller="Games" asp-action="Details" asp-route-id="@item.Game.Id">View game ↗</a>
+                }
+                else
+                {
+                    <form asp-controller="Discover" asp-action="Import" method="post">
+                        <input type="hidden" name="igdbId" value="@item.Game.IgdbId" />
+                        <button class="btn btn-subtle" type="submit">Import &amp; view ↗</button>
+                    </form>
+                }
+            </div>
+        </article>
+    }
+</div>

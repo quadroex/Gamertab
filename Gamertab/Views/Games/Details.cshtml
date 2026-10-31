@@ -1,0 +1,122 @@
+@model GamePage
+@{
+    ViewData["Title"] = Model.Game.Name;
+    var game = Model.Game;
+}
+
+<a class="back-link" asp-action="Index">← Back to browse</a>
+<section class="detail-hero">
+    <div class="detail-art">
+        @if (!string.IsNullOrEmpty(game.CoverUrl))
+        {
+            <img src="@game.CoverUrl" alt="@game.Name cover" />
+        }
+    </div>
+    <div>
+        <p class="eyebrow accent">@game.DataSource · @(game.ReleasedOn?.ToString("yyyy") ?? "Release date unavailable")</p>
+        <h1>@game.Name</h1>
+        <p class="detail-summary">@game.Summary</p>
+        <div class="tag-row">
+            @foreach (var genre in game.Genres.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                <span class="tag">@genre</span>
+            }
+        </div>
+        <div class="action-row">
+            @if (Model.Entry is not null)
+            {
+                <a class="btn btn-accent" asp-controller="Library" asp-action="Edit" asp-route-id="@Model.Entry.Id">Edit in my library</a>
+            }
+            else if (User.Identity?.IsAuthenticated == true)
+            {
+                <form asp-controller="Library" asp-action="Add" method="post">
+                    <input type="hidden" name="gameId" value="@game.Id" />
+                    <button class="btn btn-accent" type="submit">Add to my library +</button>
+                </form>
+            }
+            else
+            {
+                <a class="btn btn-accent" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Context.Request.Path">Sign in to add</a>
+            }
+            @if (game.SteamAppId.HasValue)
+            {
+                <a class="btn btn-subtle" href="https://store.steampowered.com/app/@game.SteamAppId" target="_blank" rel="noopener noreferrer">View on Steam ↗</a>
+            }
+            @if (Model.IgdbConfigured && game.IgdbId.HasValue && User.Identity?.IsAuthenticated == true)
+            {
+                <form asp-controller="Discover" asp-action="Import" method="post">
+                    <input type="hidden" name="igdbId" value="@game.IgdbId" />
+                    <button class="quiet-button" type="submit">Refresh details</button>
+                </form>
+            }
+        </div>
+    </div>
+</section>
+<section class="facts-grid">
+    <div class="fact">
+        <span>IGDB user rating</span>
+        <strong>@(game.UserRating?.ToString("0.0") ?? "Not available")</strong>
+    </div>
+    <div class="fact">
+        <span>IGDB critic rating</span>
+        <strong>@(game.CriticRating?.ToString("0.0") ?? "Not available")</strong>
+    </div>
+    <div class="fact">
+        <span>Age ratings</span>
+        <strong class="small-fact">@(string.IsNullOrEmpty(game.AgeRatings) ? "Not available" : game.AgeRatings)</strong>
+    </div>
+    <div class="fact">
+        <span>Game modes</span>
+        <strong class="small-fact">@game.Modes.Replace(",", " · ")</strong>
+    </div>
+</section>
+<section class="content-panel">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Make time for your next game</p>
+            <h2>How long to play?</h2>
+        </div>
+    </div>
+    <div class="time-grid">
+        <div>
+            <span>Main story</span>
+            <strong>@(game.MainHours.HasValue ? $"{game.MainHours:0.#} h" : "Not available")</strong>
+        </div>
+        <div>
+            <span>Story + some extras</span>
+            <strong>@(game.ExtrasHours.HasValue ? $"{game.ExtrasHours:0.#} h" : "Not available")</strong>
+        </div>
+        <div>
+            <span>100% completion</span>
+            <strong>@(game.CompleteHours.HasValue ? $"{game.CompleteHours:0.#} h" : "Not available")</strong>
+        </div>
+    </div>
+    <p class="muted small mt-3 mb-0">Estimates from IGDB@(game.TimeSubmissions.HasValue ? $" · {game.TimeSubmissions} submissions" : ""). DLC time is not automatically included.</p>
+</section>
+<section class="news-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">From the source</p>
+            <h2>Latest news &amp; updates</h2>
+        </div>
+        <span class="muted">Steam announcements</span>
+    </div>
+    @if (ViewData["NewsNotice"] is string notice)
+    {
+        <p class="notice">@notice</p>
+    }
+    @if (Model.News.Count == 0)
+    {
+        <div class="empty-state compact"><p>No announcements are available for this game yet.</p></div>
+    }
+    @foreach (var article in Model.News)
+    {
+        <a class="news-row" href="@article.Url" target="_blank" rel="noopener noreferrer">
+            <div>
+                <span class="eyebrow">@article.PublishedAt.ToString("dd MMM yyyy") · @article.Source</span>
+                <h3>@article.Title</h3>
+            </div>
+            <span aria-hidden="true">↗</span>
+        </a>
+    }
+</section>

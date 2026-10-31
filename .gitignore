@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+.local/
+.env
+.env.*
+!.env.example
+TestResults/
+playwright-report/
+**/*.user
+**/*.suo
+**/secrets.json

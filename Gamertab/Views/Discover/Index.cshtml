@@ -1,0 +1,58 @@
+@model List<Game>
+@{
+    ViewData["Title"] = "Discover games";
+    var configured = ViewData["Configured"] is true;
+}
+
+<div class="page-heading">
+    <p class="eyebrow accent">There is always another world</p>
+    <h1>Find something worth playing.</h1>
+    <p class="muted">Search the IGDB catalogue and bring a game into Gamertab.</p>
+</div>
+<form asp-action="Index" method="get" class="filter-bar">
+    <label for="discover-query" class="visually-hidden">Game title</label>
+    <input id="discover-query" name="q" value="@ViewData["Query"]" class="form-control" placeholder="Try Portal, Hades or your favourite game..." minlength="2" maxlength="100" required />
+    <button class="btn btn-accent" type="submit">Search games ↗</button>
+</form>
+@if (!configured)
+{
+    <p class="notice">IGDB is not connected yet. You can still browse the starter catalogue.</p>
+}
+@if (ViewData["Notice"] is string notice)
+{
+    <p class="notice">@notice</p>
+}
+@if (configured && ViewData["Query"] is string query && query.Length >= 2 && Model.Count == 0 && ViewData["Notice"] is null)
+{
+    <div class="empty-state">
+        <h2>No matching games.</h2>
+        <p>Try another title or a shorter search.</p>
+    </div>
+}
+<div class="game-grid">
+    @foreach (var game in Model)
+    {
+        <article class="game-card">
+            <div class="game-art">
+                <img src="@game.CoverUrl" alt="@game.Name cover" loading="lazy" />
+                <span class="art-shade"></span>
+            </div>
+            <div class="game-copy">
+                <p class="eyebrow">@game.Genres.Split(',').FirstOrDefault()</p>
+                <h2>@game.Name</h2>
+                <p class="card-summary">@game.Summary</p>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <form asp-action="Import" method="post">
+                        <input name="igdbId" type="hidden" value="@game.IgdbId" />
+                        <button class="btn btn-subtle" type="submit">Import &amp; view ↗</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="btn btn-subtle" asp-controller="Account" asp-action="Login">Sign in to import</a>
+                }
+            </div>
+        </article>
+    }
+</div>

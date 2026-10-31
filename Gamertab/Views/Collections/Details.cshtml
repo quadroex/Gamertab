@@ -1,0 +1,43 @@
+@model CollectionPage
+@{
+    ViewData["Title"] = Model.Collection.Name;
+}
+
+<a class="back-link" asp-action="Index">← Collections</a>
+<div class="section-heading page-heading">
+    <div>
+        <p class="eyebrow accent">Your collection · @Model.Collection.Items.Count games</p>
+        <h1>@Model.Collection.Name</h1>
+        <p class="muted">@Model.Collection.Description</p>
+    </div>
+    <a class="btn btn-subtle" asp-action="Edit" asp-route-id="@Model.Collection.Id">Edit collection</a>
+</div>
+@if (Model.AvailableGames.Count > 0)
+{
+    <form class="filter-bar" asp-action="AddGame" asp-route-id="@Model.Collection.Id" method="post">
+        <label for="collection-game" class="visually-hidden">Game</label>
+        <select class="form-select" id="collection-game" name="gameId">
+            @foreach (var game in Model.AvailableGames)
+            {
+                <option value="@game.Id">@game.Name</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-accent">Add game +</button>
+    </form>
+}
+<div class="game-grid">
+    @foreach (var item in Model.Collection.Items)
+    {
+        <div>
+            <partial name="_GameCard" model="item.Game" />
+            <form asp-action="RemoveGame" asp-route-id="@Model.Collection.Id" method="post" class="mt-2">
+                <input type="hidden" name="gameId" value="@item.GameId" />
+                <button type="submit" class="quiet-button">Remove from collection</button>
+            </form>
+        </div>
+    }
+</div>
+<form class="delete-section" asp-action="Delete" asp-route-id="@Model.Collection.Id" method="post">
+    <p class="muted">Deleting this collection keeps your games and library entries.</p>
+    <button class="btn btn-outline-danger" type="submit">Delete collection</button>
+</form>

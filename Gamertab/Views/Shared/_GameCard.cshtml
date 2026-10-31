@@ -1,0 +1,20 @@
+@model Game
+<article class="game-card">
+    <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id" class="game-art">
+        @if (!string.IsNullOrEmpty(Model.CoverUrl))
+        {
+            <img src="@Model.CoverUrl" alt="@Model.Name cover" loading="lazy" />
+        }
+        <span class="art-shade"></span>
+        @if (Model.UserRating.HasValue)
+        {
+            <span class="rating-chip">@Model.UserRating.Value.ToString("0") <small>IGDB</small></span>
+        }
+    </a>
+    <div class="game-copy">
+        <p class="eyebrow">@Model.Genres.Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()</p>
+        <h2><a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a></h2>
+        <p class="card-summary">@Model.Summary</p>
+        <div class="card-bottom"><span>@(Model.MainHours.HasValue ? $"{Model.MainHours:0.#}h main story" : "Explore game details")</span><a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id" aria-label="View @Model.Name">↗</a></div>
+    </div>
+</article>
