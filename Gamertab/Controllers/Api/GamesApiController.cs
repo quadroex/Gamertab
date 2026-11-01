@@ -1,11 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using Gamertab.Data;
+using Gamertab.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Controllers.Api;
 
 [ApiController, Route("api/games")]
+[OutputCache(Duration = 60, VaryByQueryKeys = ["skip", "limit", "q"], Tags = [GameCatalog.CacheTag])]
 public class GamesApiController(AppDbContext database) : ControllerBase
 {
     [HttpGet(Name = "GamesList")]

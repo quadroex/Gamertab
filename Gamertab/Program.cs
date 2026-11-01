@@ -49,6 +49,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     });
 }
 builder.Services.AddMemoryCache();
+builder.Services.AddOutputCache();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
@@ -63,6 +64,7 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "Gamertab" }));
 app.MapControllerRoute("default", "{controller=Games}/{action=Index}/{id?}");
 

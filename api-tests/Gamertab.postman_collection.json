@@ -1,7 +1,8 @@
 {
   "info": {
     "name": "Gamertab local API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local API checks. The runner creates a temporary database and removes it after the run. Manual runs create a qa account in the selected environment."
   },
   "variable": [
     {
@@ -42,7 +43,153 @@
             "exec": [
               "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
               "pm.collectionVariables.set(\"csrf\", pm.response.json().csrfToken);",
-              "pm.collectionVariables.set(\"email\", \"qa-\" + pm.variables.replaceIn(\"{{$randomUUID}}\") + \"@example.test\");"
+              "pm.collectionVariables.set(\"email\", \"qa-\" + pm.variables.replaceIn(\"{{$randomUUID}}\") + \"@example.test\");",
+              "pm.test(\"Anonymous session\", () => pm.expect(pm.response.json().authenticated).to.eql(false));",
+              "pm.test(\"Session is not stored\", () => pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read catalogue",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?skip=0&limit=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Pagination\", () => pm.expect(pm.response.json().items.length).to.eql(2));",
+              "pm.collectionVariables.set(\"gameId\", pm.response.json().items[0].id);",
+              "pm.collectionVariables.set(\"gameName\", pm.response.json().items[0].name);",
+              "pm.collectionVariables.set(\"firstIds\", JSON.stringify(pm.response.json().items.map(game => game.id)));",
+              "pm.collectionVariables.set(\"nextLink\", pm.response.json().nextLink);",
+              "pm.test(\"Next page is available\", () => pm.expect(pm.response.json().nextLink).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read catalogue again",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?skip=0&limit=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Repeated page is stable\", () => pm.expect(pm.response.json().items.map(game => game.id)).to.eql(JSON.parse(pm.collectionVariables.get(\"firstIds\"))));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Follow next page",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{nextLink}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Next page has distinct games\", () => { const first = JSON.parse(pm.collectionVariables.get(\"firstIds\")); pm.expect(pm.response.json().items.every(game => !first.includes(game.id))).to.eql(true); });",
+              "pm.test(\"Offset advances\", () => pm.expect(pm.response.json().skip).to.eql(2));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read game details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games/{{gameId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Game identity is preserved\", () => { const game = pm.response.json(); pm.expect(game.id).to.eql(Number(pm.collectionVariables.get(\"gameId\"))); pm.expect(game.name).to.eql(pm.collectionVariables.get(\"gameName\")); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search catalogue",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?q=Portal&limit=100"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Search returns matching games\", () => { const data = pm.response.json(); pm.expect(data.items.length).to.be.above(0); pm.expect(data.items.every(game => game.name.toLowerCase().includes(\"portal\"))).to.eql(true); pm.expect(data.nextLink).to.eql(null); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid page size",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?limit=101"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject negative offset",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?skip=-1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
             ]
           }
         }
@@ -75,7 +222,8 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));"
+              "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
+              "pm.test(\"Registered email matches\", () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"email\")));"
             ]
           }
         }
@@ -103,11 +251,119 @@
       ]
     },
     {
-      "name": "Read catalogue",
+      "name": "Reject invalid rating",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/library",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gameId\":{{gameId}},\"status\":\"Planned\",\"personalRating\":11}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject reversed dates",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/library",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gameId\":{{gameId}},\"status\":\"Completed\",\"startedOn\":\"2026-10-20\",\"completedOn\":\"2026-10-01\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid CSRF token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/library",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gameId\":{{gameId}},\"status\":\"Planned\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.request.headers.upsert({ key: \"X-CSRF-TOKEN\", value: \"invalid-test-token\" });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rejected requests leave library empty",
       "request": {
         "method": "GET",
         "header": [],
-        "url": "{{baseUrl}}/api/games?skip=0&limit=2"
+        "url": "{{baseUrl}}/api/library"
       },
       "event": [
         {
@@ -116,8 +372,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-              "pm.test(\"Pagination\", () => pm.expect(pm.response.json().items.length).to.eql(2));",
-              "pm.collectionVariables.set(\"gameId\", pm.response.json().items[0].id);"
+              "pm.test(\"No invalid entries were saved\", () => pm.expect(pm.response.json()).to.eql([]));"
             ]
           }
         }
@@ -151,7 +406,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.test(\"HTTP 201\", () => pm.response.to.have.status(201));",
-              "pm.collectionVariables.set(\"entryId\", pm.response.json().id);"
+              "pm.collectionVariables.set(\"entryId\", pm.response.json().id);",
+              "pm.test(\"Planned status saved\", () => pm.expect(pm.response.json().status).to.eql(\"Planned\"));"
             ]
           }
         }
@@ -203,7 +459,7 @@
         "url": "{{baseUrl}}/api/library/{{entryId}}",
         "body": {
           "mode": "raw",
-          "raw": "{\"gameId\":{{gameId}},\"status\":\"Completed\",\"personalRating\":8.5,\"startedOn\":\"2026-10-01\",\"completedOn\":\"2026-10-20\"}",
+          "raw": "{\"gameId\":{{gameId}},\"status\":\"Completed\",\"personalRating\":8.5,\"notes\":\"API verification\",\"startedOn\":\"2026-10-01\",\"completedOn\":\"2026-10-20\",\"followNews\":true}",
           "options": {
             "raw": {
               "language": "json"
@@ -237,7 +493,8 @@
             "type": "text/javascript",
             "exec": [
               "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
-              "pm.test(\"Completion saved\", () => pm.expect(pm.response.json().status).to.eql(\"Completed\"));"
+              "pm.test(\"Completion saved\", () => pm.expect(pm.response.json().status).to.eql(\"Completed\"));",
+              "pm.test(\"Rating, notes and dates saved\", () => { const entry = pm.response.json(); pm.expect(entry.personalRating).to.eql(8.5); pm.expect(entry.notes).to.eql(\"API verification\"); pm.expect(entry.startedOn).to.eql(\"2026-10-01\"); pm.expect(entry.completedOn).to.eql(\"2026-10-20\"); pm.expect(entry.followNews).to.eql(true); });"
             ]
           }
         }
@@ -278,6 +535,40 @@
       ]
     },
     {
+      "name": "Update collection",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Weekend games\",\"description\":\"API verification\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Collection renamed\", () => pm.expect(pm.response.json().name).to.eql(\"Weekend games\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Add collection game",
       "request": {
         "method": "POST",
@@ -311,6 +602,98 @@
       ]
     },
     {
+      "name": "Reject duplicate collection game",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}/games",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gameId\":{{gameId}}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 409\", () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read collection membership",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Collection contains selected game\", () => { const collection = pm.response.json(); pm.expect(collection.name).to.eql(\"Weekend games\"); pm.expect(collection.games.map(game => game.gameId)).to.eql([Number(pm.collectionVariables.get(\"gameId\"))]); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Remove collection game",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}/games/{{gameId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read empty collection",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Membership removed\", () => pm.expect(pm.response.json().games).to.eql([]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Delete temporary collection",
       "request": {
         "method": "DELETE",
@@ -324,6 +707,45 @@
             "type": "text/javascript",
             "exec": [
               "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deleted collection is gone",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/collections/{{collectionId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Collection deletion keeps library entry",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/library/{{entryId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Completion remains saved\", () => pm.expect(pm.response.json().status).to.eql(\"Completed\"));"
             ]
           }
         }
@@ -349,7 +771,193 @@
       ]
     },
     {
+      "name": "Deleted library entry is gone",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/library/{{entryId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 404\", () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Sign out",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/account/logout",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 204\", () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Signed out session cannot read library",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/library"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Signed out session cannot read collections",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/collections"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh anonymous CSRF token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/account/session"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"csrf\", pm.response.json().csrfToken);",
+              "pm.test(\"Signed out\", () => pm.expect(pm.response.json().authenticated).to.eql(false));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sign in to existing test account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/account/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{email}}\",\"password\":\"{{password}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Login email matches\", () => pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"email\")));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Refresh restored session",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/account/session"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"csrf\", pm.response.json().csrfToken);",
+              "pm.test(\"Session restored\", () => pm.expect(pm.response.json().authenticated).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read cleaned library",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/library"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Deletion persisted after login\", () => pm.expect(pm.response.json()).to.eql([]));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sign out after verification",
       "request": {
         "method": "POST",
         "header": [

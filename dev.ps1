@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'api-test', 'down', 'status')]
     [string]$Action = 'run'
 )
 
@@ -37,7 +37,7 @@ function Invoke-DevelopmentDocker([string[]]$DockerArguments) {
     if ($LASTEXITCODE -ne 0) { throw 'The Docker command failed.' }
 }
 
-if ($Action -in @('up', 'run')) {
+if ($Action -in @('up', 'run', 'api-test')) {
     New-Item -ItemType Directory -Force -Path $statePath | Out-Null
     $environmentPath = Join-Path $projectRoot '.env'
     if (-not (Test-Path -LiteralPath $environmentPath)) {
@@ -85,6 +85,11 @@ switch ($Action) {
     'run' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))
         dotnet run --project $projectFile
+        exit $LASTEXITCODE
+    }
+    'api-test' {
+        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))
+        & (Join-Path $projectRoot 'api-tests\run.ps1')
         exit $LASTEXITCODE
     }
     'status' {

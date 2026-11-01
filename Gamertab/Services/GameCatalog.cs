@@ -1,11 +1,14 @@
 using Gamertab.Data;
 using Gamertab.Models;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Services;
 
-public class GameCatalog(AppDbContext database, IgdbClient igdb)
+public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheStore outputCache)
 {
+    public const string CacheTag = "games";
+
     public async Task<CatalogPage> BrowseAsync(string? query, string? genre, int page, CancellationToken cancellationToken)
     {
         string? notice = null;
@@ -67,6 +70,7 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb)
             imported.Id = existing.Id;
             database.Entry(existing).CurrentValues.SetValues(imported);
             await database.SaveChangesAsync(cancellationToken);
+            await outputCache.EvictByTagAsync(CacheTag, CancellationToken.None);
             return existing;
         }
 
@@ -74,6 +78,7 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb)
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            await outputCache.EvictByTagAsync(CacheTag, CancellationToken.None);
             return imported;
         }
         catch (DbUpdateException)
