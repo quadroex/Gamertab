@@ -22,6 +22,7 @@
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     <span class="account-name">@User.Identity.Name</span>
+                    <a asp-controller="Account" asp-action="Settings">Account</a>
                     <form asp-controller="Account" asp-action="Logout" method="post"><button class="quiet-button" type="submit">Sign out</button></form>
                 }
                 else

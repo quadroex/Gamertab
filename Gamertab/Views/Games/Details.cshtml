@@ -5,6 +5,10 @@
 }
 
 <a class="back-link" asp-action="Index">← Back to browse</a>
+@if (ViewData["DetailsNotice"] is string detailsNotice)
+{
+    <p class="notice" role="status">@detailsNotice</p>
+}
 <section class="detail-hero">
     <div class="detail-art">
         @if (!string.IsNullOrEmpty(game.CoverUrl))

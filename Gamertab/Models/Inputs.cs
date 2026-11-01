@@ -86,9 +86,24 @@ public class CollectionGameInput
     public int GameId { get; set; }
 }
 
-public record CatalogPage(List<Game> Games, string? Query, string? Genre, int Page, int TotalPages);
+public record CatalogPage(List<Game> Games, string? Query, string? Genre, int Page, bool HasNextPage, bool IsLive, string? Notice = null)
+{
+    public static IReadOnlyDictionary<string, int> Genres { get; } = new Dictionary<string, int>
+    {
+        ["Adventure"] = 31,
+        ["Indie"] = 32,
+        ["Platform"] = 8,
+        ["Puzzle"] = 9,
+        ["Racing"] = 10,
+        ["Role-playing"] = 12,
+        ["Shooter"] = 5,
+        ["Simulator"] = 13,
+        ["Strategy"] = 15
+    };
+}
 public record GamePage(Game Game, LibraryEntry? Entry, List<NewsItem> News, bool IgdbConfigured);
 public record LibraryPage(List<LibraryEntry> Entries, string? Status);
 public record LibraryEditPage(Game Game, LibraryInput Input);
 public record CollectionPage(GameCollection Collection, List<Game> AvailableGames);
 public record Recommendation(Game Game, int Score, string Reason);
+public record AccountSettingsPage(string Email, bool HasPassword, bool GoogleLinked, bool GoogleAvailable);

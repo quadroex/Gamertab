@@ -23,6 +23,8 @@ services:
       ConnectionStrings__Gamertab: Host=db;Database=gamertab;Username=gamertab;Password=${POSTGRES_PASSWORD}
       Igdb__ClientId: ${IGDB_CLIENT_ID:-}
       Igdb__ClientSecret: ${IGDB_CLIENT_SECRET:-}
+      Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
     ports:
       - "127.0.0.1:5180:8080"
     depends_on:

@@ -1,0 +1,27 @@
+@model AccountSettingsPage
+@{
+    ViewData["Title"] = "Account settings";
+}
+
+<section class="form-panel">
+    <p class="eyebrow accent">Your account</p>
+    <h1>Account settings.</h1>
+    <p class="muted">@Model.Email</p>
+    <h2 class="mt-4">Sign-in methods</h2>
+    <p>Email and password · @(Model.HasPassword ? "Enabled" : "Not set up")</p>
+    @if (Model.GoogleLinked)
+    {
+        <p class="notice">Google is connected. You can sign in with your Google account.</p>
+    }
+    else
+    {
+        <p class="muted">Connect Google to sign in to this same library with your Google account.</p>
+        <form asp-action="LinkGoogle" method="post">
+            <button class="btn btn-google" type="submit" disabled="@(!Model.GoogleAvailable)">Connect Google</button>
+        </form>
+        @if (!Model.GoogleAvailable)
+        {
+            <p class="form-hint mt-2">Google sign-in is currently unavailable.</p>
+        }
+    }
+</section>

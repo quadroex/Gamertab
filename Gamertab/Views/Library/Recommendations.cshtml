@@ -34,10 +34,7 @@
                 }
                 else
                 {
-                    <form asp-controller="Discover" asp-action="Import" method="post">
-                        <input type="hidden" name="igdbId" value="@item.Game.IgdbId" />
-                        <button class="btn btn-subtle" type="submit">Import &amp; view ↗</button>
-                    </form>
+                    <a class="btn btn-subtle" asp-controller="Games" asp-action="Open" asp-route-id="@item.Game.IgdbId">View game ↗</a>
                 }
             </div>
         </article>

@@ -1,0 +1,9 @@
+<form asp-controller="Account" asp-action="GoogleLogin" method="post">
+    <input type="hidden" name="returnUrl" value="@Context.Request.Query["returnUrl"]" />
+    <button class="btn btn-google w-100" type="submit" disabled="@(ViewData["GoogleAvailable"] is not true)">Sign in with Google</button>
+</form>
+@if (ViewData["GoogleAvailable"] is not true)
+{
+    <p class="form-hint text-center mt-2">Google sign-in is currently unavailable. You can use email instead.</p>
+}
+<div class="auth-divider"><span>or use email</span></div>

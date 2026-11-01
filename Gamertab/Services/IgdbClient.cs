@@ -16,11 +16,19 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
     public bool IsConfigured => !string.IsNullOrWhiteSpace(configuration["Igdb:ClientId"]) &&
         !string.IsNullOrWhiteSpace(configuration["Igdb:ClientSecret"]);
 
-    public async Task<List<Game>> SearchAsync(string query, CancellationToken cancellationToken = default)
+    public async Task<List<Game>> BrowseAsync(string? query, string? genre, int page, CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured || query.Trim().Length < 2)
+        if (!IsConfigured)
             return [];
-        var data = await SendAsync("games", $"search {JsonSerializer.Serialize(query.Trim())}; fields {Fields}; limit 20;", cancellationToken);
+        var filter = "platforms = (6) & game_type = (0,4,8,9,10,11) & version_parent = null";
+        if (!string.IsNullOrEmpty(genre) && CatalogPage.Genres.TryGetValue(genre, out var genreId))
+            filter += $" & genres = ({genreId})";
+        var search = string.IsNullOrWhiteSpace(query)
+            ? "sort rating_count desc;"
+            : $"search {JsonSerializer.Serialize(query.Trim())};";
+        if (string.IsNullOrWhiteSpace(query))
+            filter += " & rating_count >= 20";
+        var data = await SendAsync("games", $"{search} fields {Fields}; where {filter}; limit 13; offset {(page - 1) * 12};", cancellationToken);
         return data.EnumerateArray().Select(ParseGame).ToList();
     }
 

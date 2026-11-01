@@ -6,6 +6,7 @@
 <section class="auth-panel">
     <p class="eyebrow accent">Pick up where you left off</p>
     <h1>Welcome back.</h1>
+    <partial name="_GoogleSignIn" />
     <form method="post" asp-action="Login">
         <div asp-validation-summary="All" class="text-danger"></div>
         <input asp-for="ReturnUrl" type="hidden" />

@@ -1,6 +1,10 @@
 @model Game
+@{
+    var detailsAction = Model.Id > 0 ? "Details" : "Open";
+    var detailsId = Model.Id > 0 ? Model.Id : Model.IgdbId;
+}
 <article class="game-card">
-    <a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id" class="game-art">
+    <a asp-controller="Games" asp-action="@detailsAction" asp-route-id="@detailsId" class="game-art">
         @if (!string.IsNullOrEmpty(Model.CoverUrl))
         {
             <img src="@Model.CoverUrl" alt="@Model.Name cover" loading="lazy" />
@@ -13,8 +17,11 @@
     </a>
     <div class="game-copy">
         <p class="eyebrow">@Model.Genres.Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()</p>
-        <h2><a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id">@Model.Name</a></h2>
+        <h2><a asp-controller="Games" asp-action="@detailsAction" asp-route-id="@detailsId">@Model.Name</a></h2>
         <p class="card-summary">@Model.Summary</p>
-        <div class="card-bottom"><span>@(Model.MainHours.HasValue ? $"{Model.MainHours:0.#}h main story" : "Explore game details")</span><a asp-controller="Games" asp-action="Details" asp-route-id="@Model.Id" aria-label="View @Model.Name">↗</a></div>
+        <div class="card-bottom">
+            <span>@(Model.MainHours.HasValue ? $"{Model.MainHours:0.#}h main story" : "Explore game details")</span>
+            <a asp-controller="Games" asp-action="@detailsAction" asp-route-id="@detailsId" aria-label="View @Model.Name">↗</a>
+        </div>
     </div>
 </article>

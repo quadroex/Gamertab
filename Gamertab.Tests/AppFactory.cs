@@ -14,16 +14,22 @@ namespace Gamertab.Tests;
 public class AppFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection connection = new("Data Source=:memory:");
+    protected virtual bool GoogleEnabled => false;
+    protected virtual bool IgdbEnabled => false;
 
     public AppFactory() => connection.Open();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("Authentication:Google:ClientId", GoogleEnabled ? "gamertab-test-client" : "");
+        builder.UseSetting("Authentication:Google:ClientSecret", GoogleEnabled ? "gamertab-test-secret" : "");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Igdb:ClientId"] = "",
-            ["Igdb:ClientSecret"] = ""
+            ["Igdb:ClientId"] = IgdbEnabled ? "igdb-test-client" : "",
+            ["Igdb:ClientSecret"] = IgdbEnabled ? "igdb-test-secret" : "",
+            ["Authentication:Google:ClientId"] = GoogleEnabled ? "gamertab-test-client" : "",
+            ["Authentication:Google:ClientSecret"] = GoogleEnabled ? "gamertab-test-secret" : ""
         }));
         builder.ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
         builder.ConfigureServices(services =>

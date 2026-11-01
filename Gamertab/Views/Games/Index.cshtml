@@ -3,51 +3,58 @@
     ViewData["Title"] = "Find your next game";
 }
 
-<section class="hero">
-    <div class="hero-copy">
-        <p class="eyebrow accent">A place for your games</p>
-        <h1>Less scrolling.<br />More <span>good games.</span></h1>
-        <p class="hero-description">Keep track of what you play, find your next favourite and catch the updates that matter.</p>
-        <a asp-controller="Discover" asp-action="Index" class="btn btn-accent">Discover games <span aria-hidden="true">↗</span></a>
-    </div>
-    <div class="hero-panel">
-        <span class="panel-label">YOUR NEXT CHAPTER</span>
-        <div class="hero-orbit">
-            <span class="orbit-one"></span>
-            <span class="orbit-two"></span>
-            <span class="orbit-core">g</span>
+@if (string.IsNullOrEmpty(Model.Query) && string.IsNullOrEmpty(Model.Genre) && Model.Page == 1)
+{
+    <section class="hero">
+        <div class="hero-copy">
+            <p class="eyebrow accent">A place for your games</p>
+            <h1>Less scrolling.<br />More <span>good games.</span></h1>
+            <p class="hero-description">Keep track of what you play, find your next favourite and catch the updates that matter.</p>
+            <a href="#catalogue" class="btn btn-accent">Discover games <span aria-hidden="true">↗</span></a>
         </div>
-        <p>A library that grows<br />with your taste.</p>
-        <span class="panel-caption">PLAY · DISCOVER · REPEAT</span>
-    </div>
-</section>
-<section>
+        <div class="hero-panel">
+            <span class="panel-label">YOUR NEXT CHAPTER</span>
+            <div class="hero-orbit">
+                <span class="orbit-one"></span>
+                <span class="orbit-two"></span>
+                <span class="orbit-core">g</span>
+            </div>
+            <p>A library that grows<br />with your taste.</p>
+            <span class="panel-caption">PLAY · DISCOVER · REPEAT</span>
+        </div>
+    </section>
+}
+<section id="catalogue">
     <div class="section-heading">
         <div>
-            <p class="eyebrow">Make room for something new</p>
-            <h2>Browse the catalogue</h2>
+            <p class="eyebrow">@(Model.IsLive ? "A whole world of PC games" : "Your saved catalogue")</p>
+            <h2>@(string.IsNullOrEmpty(Model.Query) ? "Discover your next game" : "Search results")</h2>
         </div>
-        <a class="text-link" asp-controller="Discover" asp-action="Index">Search IGDB ↗</a>
+        <span class="muted small">@(Model.IsLive ? "Live discovery · IGDB" : "Saved games")</span>
     </div>
     <form method="get" class="filter-bar" asp-action="Index">
         <label class="visually-hidden" for="catalog-query">Search catalogue</label>
-        <input id="catalog-query" name="q" value="@Model.Query" placeholder="Search your catalogue..." class="form-control" maxlength="100" />
+        <input id="catalog-query" name="q" value="@Model.Query" placeholder="Search games, e.g. Elden Ring..." class="form-control" maxlength="100" />
         <label class="visually-hidden" for="genre">Genre</label>
         <select id="genre" name="genre" class="form-select">
             <option value="">All genres</option>
-            @foreach (var genre in new[] { "Action", "Adventure", "Puzzle", "Role-playing", "Horror", "Simulator" })
+            @foreach (var genre in CatalogPage.Genres.Keys)
             {
                 <option value="@genre" selected="@(Model.Genre == genre)">@genre</option>
             }
         </select>
         <button type="submit" class="btn btn-subtle">Find games</button>
     </form>
+    @if (Model.Notice is not null)
+    {
+        <p class="notice" role="status">@Model.Notice</p>
+    }
     @if (Model.Games.Count == 0)
     {
         <div class="empty-state">
             <h3>No games found</h3>
-            <p>Try another title or discover more games through IGDB.</p>
-            <a asp-controller="Discover" asp-action="Index" asp-route-q="@Model.Query" class="btn btn-accent">Search IGDB</a>
+            <p>Try another title or genre.</p>
+            <a asp-action="Index" class="btn btn-accent">Clear filters</a>
         </div>
     }
     <div class="game-grid">
@@ -56,15 +63,15 @@
             <partial name="_GameCard" model="game" />
         }
     </div>
-    @if (Model.TotalPages > 1)
+    @if (Model.Page > 1 || Model.HasNextPage)
     {
         <nav class="pagination-row" aria-label="Catalogue pages">
             @if (Model.Page > 1)
             {
                 <a asp-route-page="@(Model.Page - 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Previous</a>
             }
-            <span>Page @Model.Page of @Model.TotalPages</span>
-            @if (Model.Page < Model.TotalPages)
+            <span>Page @Model.Page</span>
+            @if (Model.HasNextPage)
             {
                 <a asp-route-page="@(Model.Page + 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Next</a>
             }

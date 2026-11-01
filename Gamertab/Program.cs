@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Globalization;
 using Gamertab.Data;
 using Gamertab.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +31,26 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Account/Login";
     options.Cookie.Name = "Gamertab.Session";
 });
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services.AddAuthentication().AddGoogle(options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.ClaimActions.MapJsonKey("urn:google:email_verified", "email_verified");
+        options.Events.OnRemoteFailure = context =>
+        {
+            context.HandleResponse();
+            context.Response.Redirect("/Account/Login?externalError=true");
+            return Task.CompletedTask;
+        };
+    });
+}
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<RecommendationService>();
+builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<SteamNewsClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
 
