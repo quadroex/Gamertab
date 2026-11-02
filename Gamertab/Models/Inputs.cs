@@ -110,7 +110,7 @@ public record GameMedia(IReadOnlyList<GameScreenshot> Screenshots, GameVideo? Vi
 public record SteamStoreInfo(bool IsFree, decimal? Price, decimal? OriginalPrice, int DiscountPercent, DateTimeOffset CheckedAt, int? MetacriticScore = null, string? MetacriticUrl = null);
 public record LibraryPage(List<LibraryEntry> Entries, string? Status);
 public record LibraryEditPage(Game Game, LibraryInput Input);
-public record PlayJournalPage(int EntryId, string GameName, string StorageKey);
+public record PlayJournalPage(int EntryId, int GameId, string GameName, string StorageKey, string OwnerId);
 public record StatisticValue(string Label, int Count);
 public record LibraryStatisticsPage(int Total, int Completed, double? AverageRating, int Rated, int UndatedCompletions,
     List<StatisticValue> Statuses, List<StatisticValue> Genres, List<StatisticValue> Months);

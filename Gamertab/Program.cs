@@ -9,6 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+if (args.Contains("--mcp"))
+{
+    await McpHost.RunAsync(args);
+    return;
+}
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews(options =>
@@ -55,6 +60,8 @@ builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddScoped<CollectionCoverService>();
 builder.Services.AddScoped<PlanAccess>();
+builder.Services.AddScoped<JournalStore>();
+builder.Services.AddSignalR();
 builder.Services.AddHostedService<NewsUpdateWorker>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<SteamNewsClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
@@ -67,10 +74,21 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
 app.UseStaticFiles();
 app.UseRouting();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/hubs/journal") && context.Request.Headers.TryGetValue("Origin", out var origin) &&
+        (!Uri.TryCreate(origin.ToString(), UriKind.Absolute, out var uri) || uri.Authority != context.Request.Host.Value || uri.Scheme != context.Request.Scheme))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+    await next();
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseOutputCache();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "Gamertab" }));
+app.MapHub<JournalHub>("/hubs/journal");
 app.MapControllerRoute("default", "{controller=Games}/{action=Index}/{id?}");
 
 await using (var scope = app.Services.CreateAsyncScope())

@@ -13,10 +13,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
     public DbSet<NewsItem> NewsItems => Set<NewsItem>();
     public DbSet<UserPlan> UserPlans => Set<UserPlan>();
+    public DbSet<PlayJournal> PlayJournals => Set<PlayJournal>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<PlayJournal>().HasKey(journal => new { journal.UserId, journal.GameId });
         builder.Entity<UserPlan>().HasOne(plan => plan.User).WithOne().HasForeignKey<UserPlan>(plan => plan.UserId);
         builder.Entity<Game>().HasIndex(game => game.IgdbId).IsUnique();
         builder.Entity<LibraryEntry>().HasIndex(entry => new { entry.UserId, entry.GameId }).IsUnique();

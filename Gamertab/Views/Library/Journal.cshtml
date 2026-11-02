@@ -4,7 +4,8 @@
 }
 
 <a class="back-link" asp-action="Edit" asp-route-id="@Model.EntryId">← @Model.GameName</a>
-<section class="play-journal" data-journal data-storage-key="@Model.StorageKey" data-game-name="@Model.GameName">
+<section class="play-journal" data-journal data-storage-key="@Model.StorageKey" data-game-id="@Model.GameId" data-game-name="@Model.GameName" data-owner-id="@Model.OwnerId">
+    @Html.AntiForgeryToken()
     <div class="section-heading page-heading">
         <div>
             <p class="eyebrow accent">Your play journal</p>
@@ -21,9 +22,15 @@
         </div>
         <label class="check-label"><input type="checkbox" data-preview-toggle /> Show preview</label>
     </div>
-    <p class="form-hint">Saved automatically in this browser for your account. These journal notes do not sync to other devices. Drag a block or use its arrow buttons to reorder it.</p>
+    <p class="form-hint">Saved to your account and synced between open browsers. A local draft is kept while offline. Drag a block or use its arrow buttons to reorder it.</p>
     <p class="journal-status" role="status" aria-live="polite" data-save-status></p>
+    <button type="button" class="quiet-button" data-retry>Retry sync</button>
     <p class="notice" role="alert" data-journal-error hidden></p>
+    <div class="notice" role="alert" data-conflict hidden>
+        <p>Another session saved a different version. Your draft is still here. Export it first if you want to keep both copies.</p>
+        <button type="button" class="btn btn-subtle" data-use-server>Load server copy</button>
+        <button type="button" class="btn btn-accent" data-keep-local>Save my draft instead</button>
+    </div>
     <div class="journal-layout">
         <div class="journal-blocks" aria-label="Journal blocks" data-blocks></div>
         <section class="content-panel journal-preview" aria-label="Journal preview" data-preview hidden>
@@ -56,5 +63,6 @@
 </section>
 
 @section Scripts {
+    <script src="~/lib/signalr/signalr.min.js" asp-append-version="true"></script>
     <script src="~/js/play-journal.js" asp-append-version="true"></script>
 }

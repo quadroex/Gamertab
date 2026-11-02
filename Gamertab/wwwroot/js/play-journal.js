@@ -11,33 +11,45 @@ if (journal) {
     const types = ['paragraph', 'heading', 'list'];
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let blocks = [{ id: crypto.randomUUID(), type: 'paragraph', text: '' }];
-    let dirty = false;
+    const clientId = crypto.randomUUID();
+    const draftKey = key + ':draft';
+    const endpoint = '/api/journals/' + journal.dataset.gameId;
+    const csrf = journal.querySelector('input[name="__RequestVerificationToken"]').value;
+    let revision = 0;
+    let pending = false;
+    let ready = false;
+    let syncing = false;
+    let conflict = null;
+    let edits = 0;
     let timer;
     let draggedId = null;
     let storageReady = true;
+    let storageFailed = false;
 
     const showError = message => {
         error.textContent = message;
         error.hidden = false;
     };
+    const documentBlocks = () => blocks.map(({ type, text }) => ({ type, text }));
+    const sameBlocks = other => JSON.stringify(documentBlocks()) === JSON.stringify(other);
     try {
-        const saved = localStorage.getItem(key);
+        const saved = sessionStorage.getItem(draftKey) ?? localStorage.getItem(key);
         if (saved !== null) {
             const savedDocument = JSON.parse(saved);
-            if (savedDocument.version !== 1 || !Array.isArray(savedDocument.blocks) || savedDocument.blocks.length > 100 ||
-                !savedDocument.blocks.every(block => types.includes(block.type) && typeof block.text === 'string' && block.text.length <= 10000)) {
+            if (![1, 2].includes(savedDocument.version) || !Array.isArray(savedDocument.blocks) || savedDocument.blocks.length > 100 ||
+                !savedDocument.blocks.every(block => types.includes(block.type) && typeof block.text === 'string' && block.text.length <= 10000) ||
+                (savedDocument.version === 2 && (!Number.isInteger(savedDocument.revision) || savedDocument.revision < 0 || typeof savedDocument.pending !== 'boolean'))) {
                 throw new Error('Invalid journal');
             }
             blocks = savedDocument.blocks.map(block => ({ id: crypto.randomUUID(), type: block.type, text: block.text }));
-            status.textContent = 'Restored from this browser';
-        } else {
-            status.textContent = 'Ready to write';
+            revision = savedDocument.revision ?? 0;
+            pending = savedDocument.version === 1 || savedDocument.pending;
         }
     } catch {
         storageReady = false;
-        showError('The saved journal could not be read. Its stored copy has been kept. This page will not overwrite it; you can still write and export a new Markdown copy.');
-        status.textContent = 'Browser saving is unavailable';
+        showError('The local journal could not be read. Its stored copy has been kept. You can still use the server copy and export Markdown.');
     }
+    status.textContent = 'Connecting…';
 
     const markdown = () => blocks.map(block => {
         if (block.type === 'heading') return '# ' + block.text.replace(/\r?\n/g, ' ');
@@ -64,25 +76,102 @@ if (journal) {
         });
     };
 
-    const save = () => {
-        clearTimeout(timer);
-        if (!dirty || !storageReady) return;
+    const saveLocal = () => {
+        if (!storageReady) return;
+        const saved = JSON.stringify({ version: 2, revision, pending, blocks: documentBlocks() });
         try {
-            localStorage.setItem(key, JSON.stringify({ version: 1, blocks: blocks.map(({ type, text }) => ({ type, text })) }));
-            dirty = false;
-            status.textContent = 'Saved in this browser';
-            error.hidden = true;
+            sessionStorage.setItem(draftKey, saved);
+            localStorage.setItem(key, saved);
+            storageFailed = false;
         } catch {
-            status.textContent = 'Not saved';
-            showError('This browser could not save your journal. Export Markdown before leaving to keep your changes.');
+            storageFailed = true;
+            showError('Local saving is unavailable. Keep this page open until synced, or export Markdown.');
         }
     };
-    const changed = () => {
-        dirty = true;
-        status.textContent = storageReady ? 'Saving…' : 'Not saved in this browser';
-        updatePreview();
+    const showConflict = snapshot => {
+        if (!conflict || snapshot.revision >= conflict.revision) conflict = snapshot;
+        journal.querySelector('[data-conflict]').hidden = false;
+        status.textContent = 'Conflicting changes — choose a copy';
+        saveLocal();
+    };
+    const accept = snapshot => {
+        revision = snapshot.revision;
+        blocks = snapshot.blocks.map(block => ({ id: crypto.randomUUID(), ...block }));
+        pending = false;
+        conflict = null;
+        journal.querySelector('[data-conflict]').hidden = true;
+        render();
+        saveLocal();
+        if (storageReady && !storageFailed) error.hidden = true;
+        status.textContent = 'Synced to your account';
+    };
+    const refresh = async () => {
+        if (syncing) {
+            setTimeout(refresh, 400);
+            return;
+        }
+        try {
+            const response = await fetch(endpoint, { cache: 'no-store' });
+            if (!response.ok) throw new Error();
+            const snapshot = await response.json();
+            if (snapshot.ownerId !== journal.dataset.ownerId) {
+                ready = false;
+                status.textContent = 'Account changed — reopen the journal';
+                showError('The signed-in account changed. Your local draft is kept. Reopen the journal from My library.');
+                return;
+            }
+            ready = true;
+            if (snapshot.revision < revision) return;
+            if (!pending || sameBlocks(snapshot.blocks)) accept(snapshot);
+            else if (snapshot.revision !== revision) showConflict(snapshot);
+            else await save();
+        } catch {
+            ready = false;
+            status.textContent = 'Offline — local draft kept';
+        }
+    };
+    const save = async () => {
         clearTimeout(timer);
-        timer = setTimeout(save, 250);
+        saveLocal();
+        if (!pending || conflict || syncing || !ready) return;
+        syncing = true;
+        const sentEdits = edits;
+        try {
+            const response = await fetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                body: JSON.stringify({ revision, blocks: documentBlocks(), clientId })
+            });
+            if (response.status === 409) {
+                showConflict(await response.json());
+            } else if (!response.ok) {
+                ready = false;
+                status.textContent = 'Not synced — local draft kept';
+                showError(response.status === 401 ? 'Sign in again to sync your journal.' : 'The server could not save this journal. Your local draft is kept; export it if needed.');
+            } else {
+                const snapshot = await response.json();
+                revision = snapshot.revision;
+                pending = sentEdits !== edits;
+                saveLocal();
+                if (storageReady && !storageFailed) error.hidden = true;
+                status.textContent = pending ? 'Syncing…' : 'Synced to your account';
+            }
+        } catch {
+            ready = false;
+            status.textContent = 'Offline — local draft kept';
+        } finally {
+            syncing = false;
+        }
+        if (pending && ready && !conflict) timer = setTimeout(save, 300);
+    };
+    const changed = () => {
+        pending = true;
+        edits++;
+        status.textContent = conflict ? 'Conflicting changes — choose a copy' : ready ? 'Syncing…' : 'Offline — local draft kept';
+        updatePreview();
+        saveLocal();
+        clearTimeout(timer);
+        timer = setTimeout(save, 350);
     };
 
     const render = () => {
@@ -193,16 +282,42 @@ if (journal) {
         move(from, to);
     });
     document.addEventListener('dragend', clearDrag);
-    window.addEventListener('pagehide', save);
-    document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-    window.addEventListener('storage', event => {
-        if (event.key !== key) return;
-        clearTimeout(timer);
-        storageReady = false;
-        board.querySelectorAll('textarea, select, button').forEach(input => input.disabled = true);
-        journal.querySelectorAll('[data-add]').forEach(button => button.disabled = true);
-        status.textContent = 'Journal changed in another tab';
-        showError('Another tab changed this journal. Export your current notes if needed, then reload to use the latest saved copy.');
+    window.addEventListener('pagehide', saveLocal);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveLocal(); });
+    journal.querySelector('[data-use-server]').addEventListener('click', () => {
+        if (conflict) accept(conflict);
     });
+    journal.querySelector('[data-keep-local]').addEventListener('click', () => {
+        if (!conflict) return;
+        revision = conflict.revision;
+        conflict = null;
+        journal.querySelector('[data-conflict]').hidden = true;
+        save();
+    });
+    const connection = new signalR.HubConnectionBuilder().withUrl('/hubs/journal').withAutomaticReconnect().build();
+    const subscribe = async () => {
+        await connection.invoke('Subscribe', Number(journal.dataset.gameId));
+        await refresh();
+    };
+    connection.on('JournalChanged', (remoteRevision, writer) => {
+        if (writer !== clientId && remoteRevision > revision) refresh();
+    });
+    connection.onreconnected(subscribe);
+    connection.onreconnecting(() => { status.textContent = 'Reconnecting — local draft kept'; });
+    const connect = async () => {
+        try {
+            if (connection.state === signalR.HubConnectionState.Disconnected) await connection.start();
+            if (connection.state !== signalR.HubConnectionState.Connected) return;
+            await subscribe();
+        } catch {
+            ready = false;
+            status.textContent = 'Offline — local draft kept';
+            setTimeout(connect, 5000);
+        }
+    };
+    connection.onclose(() => setTimeout(connect, 5000));
+    window.addEventListener('online', () => refresh());
+    journal.querySelector('[data-retry]').addEventListener('click', refresh);
     render();
+    connect();
 }

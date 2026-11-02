@@ -1,6 +1,7 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'browser-test', 'api-test', 'queue-test', 'blob-test', 'down', 'status')]
-    [string]$Action = 'run'
+    [ValidateSet('up', 'run', 'test', 'browser-test', 'api-test', 'queue-test', 'blob-test', 'mcp', 'down', 'status')]
+    [string]$Action = 'run',
+    [string]$AccountEmail
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,6 +10,16 @@ $projectFile = Join-Path $projectRoot 'Gamertab\Gamertab.csproj'
 $statePath = Join-Path $projectRoot '.local'
 $keepAlivePath = Join-Path $statePath 'wsl-process.json'
 $nativeDocker = Get-Command docker -ErrorAction SilentlyContinue
+
+if ($Action -eq 'mcp') {
+    if ([string]::IsNullOrWhiteSpace($AccountEmail)) { throw 'Specify -AccountEmail for an existing Gamertab account.' }
+    $mcpArtifacts = Join-Path $statePath 'mcp-artifacts'
+    dotnet build $projectFile --artifacts-path $mcpArtifacts --verbosity quiet | ForEach-Object { [Console]::Error.WriteLine($_) }
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    $mcpDll = Join-Path $mcpArtifacts 'bin\Gamertab\debug\Gamertab.dll'
+    dotnet $mcpDll --mcp ('--Mcp:AccountEmail=' + $AccountEmail) ('--Mcp:EnvironmentFile=' + (Join-Path $projectRoot '.env'))
+    exit $LASTEXITCODE
+}
 
 if ($Action -eq 'test') {
     dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --artifacts-path (Join-Path $statePath 'artifacts') --filter 'Category!=Browser' --verbosity minimal

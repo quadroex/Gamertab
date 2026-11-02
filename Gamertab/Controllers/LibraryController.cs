@@ -118,7 +118,7 @@ public class LibraryController(AppDbContext database, RecommendationService reco
             .FirstOrDefaultAsync(item => item.Id == id && item.UserId == UserId);
         if (entry is null)
             return NotFound();
-        return View(new PlayJournalPage(entry.Id, entry.Game.Name, $"gamertab:journal:v1:{UserId}:{entry.GameId}"));
+        return View(new PlayJournalPage(entry.Id, entry.GameId, entry.Game.Name, $"gamertab:journal:v1:{UserId}:{entry.GameId}", UserId));
     }
 
     public async Task<IActionResult> Recommendations() => View(await recommendations.GetAsync(UserId, HttpContext.RequestAborted));

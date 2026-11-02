@@ -241,6 +241,28 @@ namespace Gamertab.Data.Migrations
                     b.ToTable("NewsItems");
                 });
 
+            modelBuilder.Entity("Gamertab.Models.PlayJournal", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("GameId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BlocksJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "GameId");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("PlayJournals");
+                });
+
             modelBuilder.Entity("Gamertab.Models.UserPlan", b =>
                 {
                     b.Property<string>("UserId")
@@ -508,6 +530,25 @@ namespace Gamertab.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Game");
+                });
+
+            modelBuilder.Entity("Gamertab.Models.PlayJournal", b =>
+                {
+                    b.HasOne("Gamertab.Models.Game", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Gamertab.Models.UserPlan", b =>

@@ -351,6 +351,62 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
     }
 
     [Fact]
+    public async Task JournalsSyncAcrossBrowsersAndPreserveConflictingOfflineDrafts()
+    {
+        await using var first = await fixture.NewContextAsync();
+        var page = await first.NewPageAsync();
+        var email = await RegisterAsync(page);
+        await OpenRemoteGameAsync(page);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add to my library +", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Link, new() { Name = "Open play journal", Exact = false }).ClickAsync();
+        var url = page.Url;
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        var storageKey = await page.Locator("[data-journal]").GetAttributeAsync("data-storage-key");
+        await page.AddInitScriptAsync("""
+            const key = STORAGE_KEY;
+            sessionStorage.removeItem(key + ':draft');
+            localStorage.setItem(key, JSON.stringify({ version: 1, blocks: [{ type: 'paragraph', text: 'Legacy local notes' }] }));
+            """.Replace("STORAGE_KEY", System.Text.Json.JsonSerializer.Serialize(storageKey)));
+        await page.ReloadAsync();
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+
+        await using var second = await fixture.NewContextAsync();
+        var remote = await second.NewPageAsync();
+        await remote.GotoAsync("/Account/Login");
+        await remote.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+        await remote.GetByLabel("Password", new() { Exact = true }).FillAsync(Password);
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Sign in", Exact = true }).ClickAsync();
+        await remote.GotoAsync(url);
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("Legacy local notes");
+        await page.GetByLabel("Block text", new() { Exact = true }).FillAsync("Live session update");
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("Live session update");
+
+        await second.SetOfflineAsync(true);
+        await remote.GetByLabel("Block text", new() { Exact = true }).FillAsync("My offline draft");
+        await Expect(remote.Locator("[data-save-status]")).ToContainTextAsync("local draft kept");
+        await page.GetByLabel("Block text", new() { Exact = true }).FillAsync("Newer server notes");
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        await second.SetOfflineAsync(false);
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Retry sync", Exact = true }).ClickAsync();
+        await Expect(remote.Locator("[data-conflict]")).ToBeVisibleAsync();
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("My offline draft");
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Save my draft instead", Exact = true }).ClickAsync();
+        await Expect(remote.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        await Expect(page.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("My offline draft");
+        await second.SetOfflineAsync(true);
+        await remote.GetByLabel("Block text", new() { Exact = true }).FillAsync("Draft I will discard");
+        await Expect(remote.Locator("[data-save-status]")).ToContainTextAsync("local draft kept");
+        await page.GetByLabel("Block text", new() { Exact = true }).FillAsync("Keep the server copy");
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        await second.SetOfflineAsync(false);
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Retry sync", Exact = true }).ClickAsync();
+        await Expect(remote.Locator("[data-conflict]")).ToBeVisibleAsync();
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Load server copy", Exact = true }).ClickAsync();
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("Keep the server copy");
+        await remote.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "journal-sync.png"), FullPage = true });
+    }
+
+    [Fact]
     public async Task JournalBlocksCanBeDraggedExportedAndRestoredAfterBrowserRestart()
     {
         var root = Path.GetFullPath(fixture.ResultsPath) + Path.DirectorySeparatorChar;
@@ -374,7 +430,7 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
             await page.GetByRole(AriaRole.Button, new() { Name = "Drag block", Exact = true }).Nth(2)
                 .DragToAsync(page.Locator(".journal-block").First, new() { TargetPosition = new() { X = 10, Y = 10 } });
             await Expect(page.GetByLabel("Block text", new() { Exact = true }).First).ToHaveValueAsync("Finish main story\nFind both endings");
-            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Saved in this browser");
+            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
             await context.CloseAsync();
             context = null;
 
@@ -402,7 +458,7 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
             Assert.StartsWith("- Finish main story\n- Find both endings", markdown);
             Assert.Contains("# Next session", markdown);
             await page.GetByLabel("Block text", new() { Exact = true }).Nth(2).FillAsync("Finished the first act. Next time I want to explore the optional areas.");
-            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Saved in this browser");
+            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
             await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "play-journal.png"), FullPage = true });
             await page.SetViewportSizeAsync(390, 844);
             await page.WaitForFunctionAsync("document.documentElement.scrollWidth <= window.innerWidth");
