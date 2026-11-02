@@ -1,0 +1,24 @@
+@model bool
+@{ ViewData["Title"] = "Assistant"; }
+<section class="assistant" data-assistant>
+    <p class="eyebrow accent">Your next adventure</p>
+    <h1>Gaming assistant</h1>
+    <p class="muted">Explore your library and find something to play with Gemini.</p>
+    <p class="form-hint">Your messages and requested game data are sent to Google. Free-tier content may be used to improve Google's products. Private notes, journals and your email are not included. Answers can contain mistakes.</p>
+    @if (!Model) {
+        <p class="notice">The assistant is not connected yet. Set the Gemini API key on the server.</p>
+    }
+    <div class="assistant-messages" data-messages aria-label="Conversation"></div>
+    <p class="journal-status" data-status role="status" aria-live="polite">Ready</p>
+    <form data-chat-form>
+        @Html.AntiForgeryToken()
+        <label for="chat-message">Message</label>
+        <textarea id="chat-message" class="form-control" rows="3" maxlength="4000" required placeholder="What should I play next?" disabled="@(!Model)"></textarea>
+        <div class="journal-toolbar">
+            <button class="btn btn-accent" type="submit" disabled="@(!Model)">Send</button>
+            <button class="btn btn-subtle" type="button" data-stop disabled>Stop</button>
+            <button class="quiet-button" type="button" data-clear>New conversation</button>
+        </div>
+    </form>
+</section>
+@section Scripts { <script src="~/js/assistant.js" asp-append-version="true"></script> }

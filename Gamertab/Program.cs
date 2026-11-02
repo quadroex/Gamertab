@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Globalization;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Gamertab.Data;
 using Gamertab.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -62,6 +64,14 @@ builder.Services.AddScoped<CollectionCoverService>();
 builder.Services.AddScoped<PlanAccess>();
 builder.Services.AddScoped<JournalStore>();
 builder.Services.AddSignalR();
+builder.Services.AddHttpClient<GeminiAgent>(client => client.Timeout = TimeSpan.FromSeconds(90));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddPolicy("assistant", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
 builder.Services.AddHostedService<NewsUpdateWorker>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<SteamNewsClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
@@ -86,6 +96,7 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.UseOutputCache();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "Gamertab" }));
 app.MapHub<JournalHub>("/hubs/journal");

@@ -20,10 +20,12 @@ public class BrowserFactory : PlanFactory
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:BlobStorage"] = "UseDevelopmentStorage=true",
-            ["ConnectionStrings:QueueStorage"] = ""
+            ["ConnectionStrings:QueueStorage"] = "",
+            ["Gemini:ApiKey"] = "browser-test-key"
         }));
         builder.ConfigureServices(services =>
         {
+            services.AddHttpClient<GeminiAgent>().ConfigurePrimaryHttpMessageHandler(() => new AssistantBackchannel());
             services.AddHttpClient<IgdbClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamNewsClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamStoreClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
@@ -138,6 +140,26 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         await page.GetByRole(AriaRole.Button, new() { Name = "Create account", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true })).ToBeVisibleAsync();
         return email;
+    }
+
+    [Fact]
+    public async Task AssistantShowsToolResultsStreamsTextAndClearsConversation()
+    {
+        await using var context = await fixture.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await RegisterAsync(page);
+        await page.GetByRole(AriaRole.Link, new() { Name = "Assistant", Exact = true }).ClickAsync();
+        await page.GetByLabel("Message", new() { Exact = true }).FillAsync("Read my library");
+        await page.GetByRole(AriaRole.Button, new() { Name = "Send", Exact = true }).ClickAsync();
+        await Expect(page.Locator("[data-status]")).ToHaveTextAsync("Done");
+        await Expect(page.Locator(".assistant-text").Last).ToHaveTextAsync("Your library is ready.");
+        await Expect(page.Locator(".assistant-message details")).ToHaveCountAsync(1);
+        await Expect(page.Locator("[data-messages] script")).ToHaveCountAsync(0);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "assistant.png"), FullPage = true });
+        await page.SetViewportSizeAsync(390, 844);
+        await page.WaitForFunctionAsync("document.documentElement.scrollWidth <= window.innerWidth");
+        await page.GetByRole(AriaRole.Button, new() { Name = "New conversation", Exact = true }).ClickAsync();
+        await Expect(page.Locator(".assistant-message")).ToHaveCountAsync(0);
     }
 
     private static async Task OpenRemoteGameAsync(IPage page)

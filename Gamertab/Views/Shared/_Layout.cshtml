@@ -18,6 +18,7 @@
                 <a asp-controller="Library" asp-action="Index">My library</a>
                 <a asp-controller="Collections" asp-action="Index">Collections</a>
                 <a asp-controller="Library" asp-action="Recommendations">For you</a>
+                <a asp-controller="Assistant" asp-action="Index">Assistant</a>
             </nav>
             <div class="account-nav">
                 @if (User.Identity?.IsAuthenticated == true)

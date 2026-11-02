@@ -96,6 +96,7 @@ if ($Action -in @('up', 'run', 'api-test', 'queue-test', 'blob-test')) {
         IGDB_CLIENT_SECRET = 'Igdb:ClientSecret'
         GOOGLE_CLIENT_ID = 'Authentication:Google:ClientId'
         GOOGLE_CLIENT_SECRET = 'Authentication:Google:ClientSecret'
+        GEMINI_API_KEY = 'Gemini:ApiKey'
     }
     foreach ($line in (Get-Content -LiteralPath $environmentPath)) {
         foreach ($item in $integrationKeys.GetEnumerator()) {
@@ -134,7 +135,7 @@ switch ($Action) {
             DOTNET_ENVIRONMENT = 'Development'
             ASPNETCORE_ENVIRONMENT = 'Development'
         }
-        foreach ($name in @('Igdb:ClientId', 'Igdb:ClientSecret', 'Authentication:Google:ClientId', 'Authentication:Google:ClientSecret')) {
+        foreach ($name in @('Igdb:ClientId', 'Igdb:ClientSecret', 'Authentication:Google:ClientId', 'Authentication:Google:ClientSecret', 'Gemini:ApiKey')) {
             if (-not [string]::IsNullOrWhiteSpace($localSecrets[$name])) {
                 $runEnvironment[$name.Replace(':', '__')] = $localSecrets[$name]
             }
