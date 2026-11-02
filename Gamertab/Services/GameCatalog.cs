@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Services;
 
-public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheStore outputCache)
+public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheStore outputCache, GameSearchIndex searchIndex)
 {
     public const string CacheTag = "games";
 
@@ -48,7 +48,12 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
 
         var local = database.Games.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query))
-            local = local.Where(game => game.Name.ToLower().Contains(query.ToLower()));
+        {
+            var matches = searchIndex.Search(query, (page - 1) * 12, 12, genre);
+            var found = await local.Where(game => matches.Ids.Contains(game.Id)).ToListAsync(cancellationToken);
+            var ordered = found.OrderBy(game => Array.IndexOf(matches.Ids, game.Id)).ToList();
+            return new CatalogPage(ordered, query, genre, page, (long)page * 12 < matches.Total, false, notice);
+        }
         if (!string.IsNullOrWhiteSpace(genre))
             local = local.Where(game => game.Genres.ToLower().Contains(genre.ToLower()));
         var games = await local.OrderBy(game => game.Name).Skip((page - 1) * 12).Take(13).ToListAsync(cancellationToken);
@@ -70,6 +75,7 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
             imported.Id = existing.Id;
             database.Entry(existing).CurrentValues.SetValues(imported);
             await database.SaveChangesAsync(cancellationToken);
+            searchIndex.Update(existing);
             await outputCache.EvictByTagAsync(CacheTag, CancellationToken.None);
             return existing;
         }
@@ -78,6 +84,7 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
         try
         {
             await database.SaveChangesAsync(cancellationToken);
+            searchIndex.Update(imported);
             await outputCache.EvictByTagAsync(CacheTag, CancellationToken.None);
             return imported;
         }

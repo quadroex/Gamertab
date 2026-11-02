@@ -158,6 +158,46 @@
       ]
     },
     {
+      "name": "Search descriptions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?q=space%20dwarves"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Full-text match returned\", () => { const data = pm.response.json(); pm.expect(data.total).to.eql(1); pm.expect(data.items[0].name).to.eql(\"Deep Rock Galactic\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search themes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/games?q=fantasy"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Full-text match returned\", () => { const data = pm.response.json(); pm.expect(data.total).to.eql(1); pm.expect(data.items[0].name).to.eql(\"Hades\"); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Reject invalid page size",
       "request": {
         "method": "GET",

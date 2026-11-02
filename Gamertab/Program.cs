@@ -50,6 +50,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 }
 builder.Services.AddMemoryCache();
 builder.Services.AddOutputCache();
+builder.Services.AddSingleton<GameSearchIndex>();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
@@ -76,6 +77,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     else
         await database.Database.MigrateAsync();
     await StarterData.SeedAsync(database);
+    scope.ServiceProvider.GetRequiredService<GameSearchIndex>().Rebuild(await database.Games.AsNoTracking().ToListAsync());
 }
 
 app.Run();
