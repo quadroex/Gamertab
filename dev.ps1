@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'api-test', 'queue-test', 'blob-test', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'browser-test', 'api-test', 'queue-test', 'blob-test', 'down', 'status')]
     [string]$Action = 'run'
 )
 
@@ -11,8 +11,25 @@ $keepAlivePath = Join-Path $statePath 'wsl-process.json'
 $nativeDocker = Get-Command docker -ErrorAction SilentlyContinue
 
 if ($Action -eq 'test') {
-    dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --verbosity minimal
+    dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --artifacts-path (Join-Path $statePath 'artifacts') --filter 'Category!=Browser' --verbosity minimal
     exit $LASTEXITCODE
+}
+
+if ($Action -eq 'browser-test') {
+    $resultsPath = Join-Path $statePath ('browser-tests\' + [DateTime]::Now.ToString('yyyyMMdd-HHmmss'))
+    dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --artifacts-path (Join-Path $statePath 'artifacts') --filter 'Category=Browser' --collect:'XPlat Code Coverage' --results-directory $resultsPath --verbosity minimal
+    $testExitCode = $LASTEXITCODE
+    $coverageFile = Get-ChildItem -LiteralPath $resultsPath -Filter 'coverage.cobertura.xml' -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($coverageFile) {
+        $coverage = [xml](Get-Content -LiteralPath $coverageFile.FullName -Raw)
+        $culture = [Globalization.CultureInfo]::InvariantCulture
+        $lineCoverage = 100 * [double]::Parse($coverage.coverage.'line-rate', $culture)
+        $branchCoverage = 100 * [double]::Parse($coverage.coverage.'branch-rate', $culture)
+        Write-Output ('Application line coverage: {0:0.0}%' -f $lineCoverage)
+        Write-Output ('Application branch coverage: {0:0.0}%' -f $branchCoverage)
+        Write-Output ('Coverage report: ' + $coverageFile.FullName)
+    }
+    exit $testExitCode
 }
 
 function Start-DevelopmentWsl {

@@ -1,0 +1,68 @@
+@model LibraryStatisticsPage
+@{
+    ViewData["Title"] = "Library statistics";
+}
+
+<a class="back-link" asp-action="Index">← My library</a>
+<div class="section-heading page-heading">
+    <div>
+        <p class="eyebrow accent">Your play history in numbers</p>
+        <h1>Library statistics</h1>
+        <p class="muted">Based on the games and progress saved in your library.</p>
+    </div>
+</div>
+@if (Model.Total == 0)
+{
+    <div class="empty-state">
+        <h2>Your story starts with one game</h2>
+        <p>Add games to your library to see your stats here.</p>
+        <a class="btn btn-accent" asp-controller="Games" asp-action="Index">Find a game</a>
+    </div>
+}
+else
+{
+    <section class="stats-summary" aria-label="Library summary">
+        <div class="stat-card"><span class="muted">Total games</span><strong data-stat="total">@Model.Total</strong></div>
+        <div class="stat-card"><span class="muted">Completed</span><strong data-stat="completed">@Model.Completed</strong><small class="muted">@((100.0 * Model.Completed / Model.Total).ToString("0"))% of your library</small></div>
+        <div class="stat-card"><span class="muted">Average rating</span><strong data-stat="average">@(Model.AverageRating?.ToString("0.0") ?? "—")<small>/10</small></strong><small class="muted">@Model.Rated rated games</small></div>
+    </section>
+    <div class="stats-grid">
+        <section class="content-panel stats-panel">
+            <h2>Where your games stand</h2>
+            <div class="stats-chart"><canvas id="status-chart" role="img" aria-label="Games by play status"></canvas></div>
+            <details class="stats-data"><summary>View counts</summary><dl>@foreach (var value in Model.Statuses) { <div><dt>@value.Label</dt><dd>@value.Count</dd></div> }</dl></details>
+        </section>
+        <section class="content-panel stats-panel">
+            <h2>Your top genres</h2>
+            @if (Model.Genres.Count > 0)
+            {
+                <div class="stats-chart"><canvas id="genre-chart" role="img" aria-label="Top six genres by number of library games"></canvas></div>
+                <details class="stats-data"><summary>View counts</summary><dl>@foreach (var value in Model.Genres) { <div><dt>@value.Label</dt><dd>@value.Count</dd></div> }</dl></details>
+            }
+            else
+            {
+                <p class="muted">Genre information is not available for these games.</p>
+            }
+            <p class="form-hint">A game can count toward more than one genre. This shows your library mix, not a preference score.</p>
+        </section>
+        <section class="content-panel stats-panel stats-wide">
+            <h2>Games completed by month</h2>
+            <p class="form-hint">The last 12 calendar months, including this month. Only games marked Completed with a completion date are counted.</p>
+            <div class="stats-chart"><canvas id="completion-chart" role="img" aria-label="Games completed each month over the last twelve calendar months"></canvas></div>
+            <details class="stats-data"><summary>View counts</summary><dl>@foreach (var value in Model.Months) { <div><dt>@value.Label</dt><dd>@value.Count</dd></div> }</dl></details>
+            @if (Model.UndatedCompletions > 0)
+            {
+                <p class="form-hint">@Model.UndatedCompletions completed games have no completion date and are not included in the monthly chart.</p>
+            }
+        </section>
+    </div>
+    <script id="library-statistics" type="application/json">@Json.Serialize(new { Model.Statuses, Model.Genres, Model.Months })</script>
+}
+
+@section Scripts {
+    @if (Model.Total > 0)
+    {
+        <script src="~/lib/chartjs/chart.umd.min.js" asp-append-version="true"></script>
+        <script src="~/js/library-statistics.js" asp-append-version="true"></script>
+    }
+}

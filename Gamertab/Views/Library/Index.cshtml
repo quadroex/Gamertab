@@ -8,7 +8,10 @@
         <p class="eyebrow accent">Your games, your pace</p>
         <h1>My library</h1>
     </div>
-    <a class="btn btn-accent" asp-controller="Discover" asp-action="Index">Find a game +</a>
+    <div class="action-row">
+        <a class="btn btn-subtle" asp-action="Statistics">Statistics</a>
+        <a class="btn btn-accent" asp-controller="Discover" asp-action="Index">Find a game +</a>
+    </div>
 </div>
 <nav class="status-tabs" aria-label="Library status">
     <a asp-action="Index" class="@(string.IsNullOrEmpty(Model.Status) ? "selected" : "")">All games</a>

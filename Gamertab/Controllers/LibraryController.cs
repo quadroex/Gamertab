@@ -21,6 +21,28 @@ public class LibraryController(AppDbContext database, RecommendationService reco
         return View(new LibraryPage(await query.OrderByDescending(entry => entry.CompletedOn).ThenBy(entry => entry.Game.Name).ToListAsync(), status));
     }
 
+    public async Task<IActionResult> Statistics()
+    {
+        var entries = await database.LibraryEntries.AsNoTracking().Where(entry => entry.UserId == UserId)
+            .Select(entry => new { entry.Status, entry.PersonalRating, entry.CompletedOn, entry.Game.Genres }).ToListAsync();
+        var statuses = Enum.GetValues<PlayStatus>().Select(status => new StatisticValue(
+            status == PlayStatus.OnHold ? "On hold" : status.ToString(), entries.Count(entry => entry.Status == status))).ToList();
+        var genres = entries.SelectMany(entry => entry.Genres.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase))
+            .GroupBy(genre => genre, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new StatisticValue(group.Key, group.Count())).OrderByDescending(value => value.Count)
+            .ThenBy(value => value.Label).Take(6).ToList();
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var firstMonth = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+        var months = Enumerable.Range(0, 12).Select(index => firstMonth.AddMonths(index))
+            .Select(month => new StatisticValue(month.ToString("MMM yyyy"), entries.Count(entry => entry.Status == PlayStatus.Completed &&
+                entry.CompletedOn >= month && entry.CompletedOn < month.AddMonths(1)))).ToList();
+        var ratings = entries.Where(entry => entry.PersonalRating.HasValue).Select(entry => entry.PersonalRating!.Value).ToList();
+        return View(new LibraryStatisticsPage(entries.Count, entries.Count(entry => entry.Status == PlayStatus.Completed),
+            ratings.Count == 0 ? null : ratings.Average(), ratings.Count,
+            entries.Count(entry => entry.Status == PlayStatus.Completed && !entry.CompletedOn.HasValue), statuses, genres, months));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Add(int gameId)
     {
