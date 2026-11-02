@@ -9,17 +9,20 @@ namespace Gamertab.Controllers;
 
 public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsClient news, GameCatalog catalog, RecommendationService recommendations, SteamStoreClient store) : Controller
 {
-    public async Task<IActionResult> Index(string? q, string? genre, int page = 1)
+    public async Task<IActionResult> Index(string? q, string? genre, int page = 1, bool saved = false)
     {
         q = q?.Trim();
         if (page < 1 || page > 10000 || q?.Length > 100 ||
             (!string.IsNullOrEmpty(genre) && !CatalogPage.Genres.ContainsKey(genre)))
             return BadRequest();
         if (q?.Length == 1)
-            return View(new CatalogPage([], q, genre, page, false, false, "Enter at least two characters to search."));
-        var result = await catalog.BrowseAsync(q, genre, page, HttpContext.RequestAborted);
+            return View(new CatalogPage([], q, genre, page, false, !saved && igdb.IsConfigured, "Enter at least two characters to search.") { SavedOnly = saved });
+        var result = await catalog.BrowseAsync(q, genre, page, HttpContext.RequestAborted, saved);
+        if (!string.IsNullOrEmpty(q) && result.IsLive && result.Games.Count > 0 &&
+            !result.Games.Any(game => game.Name.Equals(q, StringComparison.OrdinalIgnoreCase)))
+            result = result with { Notice = "No exact title match on this page. Other search results are shown below." };
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is not null && string.IsNullOrEmpty(q) && string.IsNullOrEmpty(genre) && page == 1)
+        if (userId is not null && !saved && string.IsNullOrEmpty(q) && string.IsNullOrEmpty(genre) && page == 1)
             result = result with { Recommendations = await recommendations.GetAsync(userId, HttpContext.RequestAborted) };
         return View(result);
     }

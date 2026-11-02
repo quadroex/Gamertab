@@ -9,10 +9,10 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
 {
     public const string CacheTag = "games";
 
-    public async Task<CatalogPage> BrowseAsync(string? query, string? genre, int page, CancellationToken cancellationToken)
+    public async Task<CatalogPage> BrowseAsync(string? query, string? genre, int page, CancellationToken cancellationToken, bool savedOnly = false)
     {
         string? notice = null;
-        if (igdb.IsConfigured)
+        if (!savedOnly && igdb.IsConfigured)
         {
             try
             {
@@ -35,30 +35,32 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
             catch (HttpRequestException exception)
             {
                 logger.LogWarning(exception, "Live game discovery failed. HTTP status {StatusCode}.", exception.StatusCode);
-                notice = "Live search is temporarily unavailable. Only saved games can be searched right now. Please try again later.";
+                notice = "Live search is temporarily unavailable. Please try again later.";
             }
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                notice = "The live catalogue took too long to respond. Showing saved games instead.";
+                notice = "Live search took too long to respond. Please try again.";
             }
         }
-        else
+        else if (!savedOnly)
         {
-            notice = "Live search is not connected. Only saved games are available right now.";
+            notice = "Live search is not connected. Please try again later.";
         }
 
+        if (!savedOnly)
+            return new CatalogPage([], query, genre, page, false, false, notice);
         var local = database.Games.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(query))
         {
             var matches = searchIndex.Search(query, (page - 1) * 12, 12, genre);
             var found = await local.Where(game => matches.Ids.Contains(game.Id)).ToListAsync(cancellationToken);
             var ordered = found.OrderBy(game => Array.IndexOf(matches.Ids, game.Id)).ToList();
-            return new CatalogPage(ordered, query, genre, page, (long)page * 12 < matches.Total, false, notice);
+            return new CatalogPage(ordered, query, genre, page, (long)page * 12 < matches.Total, false) { SavedOnly = true };
         }
         if (!string.IsNullOrWhiteSpace(genre))
             local = local.Where(game => game.Genres.ToLower().Contains(genre.ToLower()));
         var games = await local.OrderBy(game => game.Name).Skip((page - 1) * 12).Take(13).ToListAsync(cancellationToken);
-        return new CatalogPage(games.Take(12).ToList(), query, genre, page, games.Count > 12, false, notice);
+        return new CatalogPage(games.Take(12).ToList(), query, genre, page, games.Count > 12, false) { SavedOnly = true };
     }
 
     public async Task<Game?> ImportAsync(int igdbId, CancellationToken cancellationToken, bool refresh = false)

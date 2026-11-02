@@ -41,10 +41,10 @@ public class SearchTests
     {
         using var factory = new AppFactory();
         using var client = factory.CreateClient();
-        var matches = await client.GetStringAsync("/?q=cooperative&genre=Puzzle");
+        var matches = await client.GetStringAsync("/?q=cooperative&genre=Puzzle&saved=true");
         Assert.Contains("Portal 2", matches);
         Assert.DoesNotContain("Deep Rock Galactic", matches);
-        var filtered = await client.GetStringAsync("/?q=cooperative&genre=Shooter");
+        var filtered = await client.GetStringAsync("/?q=cooperative&genre=Shooter&saved=true");
         Assert.Contains("Deep Rock Galactic", filtered);
         Assert.DoesNotContain("Portal 2", filtered);
     }

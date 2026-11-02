@@ -63,12 +63,26 @@ if ($Action -in @('up', 'run', 'api-test', 'queue-test', 'blob-test')) {
             $localSecrets[$property.Name] = $property.Value
         }
     }
+    $integrationKeys = @{
+        IGDB_CLIENT_ID = 'Igdb:ClientId'
+        IGDB_CLIENT_SECRET = 'Igdb:ClientSecret'
+        GOOGLE_CLIENT_ID = 'Authentication:Google:ClientId'
+        GOOGLE_CLIENT_SECRET = 'Authentication:Google:ClientSecret'
+    }
+    foreach ($line in (Get-Content -LiteralPath $environmentPath)) {
+        foreach ($item in $integrationKeys.GetEnumerator()) {
+            if ($line.StartsWith($item.Key + '=')) {
+                $value = $line.Substring($item.Key.Length + 1)
+                if (-not [string]::IsNullOrWhiteSpace($value)) { $localSecrets[$item.Value] = $value }
+            }
+        }
+    }
     $localSecrets['ConnectionStrings:Gamertab'] = "Host=127.0.0.1;Port=15432;Database=gamertab;Username=gamertab;Password=$databasePassword"
     if ($Action -in @('up', 'run', 'queue-test', 'blob-test')) {
         $localSecrets['ConnectionStrings:QueueStorage'] = 'UseDevelopmentStorage=true'
         $localSecrets['NewsUpdates:Enabled'] = 'true'
     }
-    $localSecrets | ConvertTo-Json | Set-Content -LiteralPath $secretsFile -Encoding utf8
+    $localSecrets | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $secretsFile -Encoding utf8
     Start-DevelopmentWsl
 }
 
@@ -88,8 +102,33 @@ switch ($Action) {
     }
     'run' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db', 'storage'))
-        dotnet run --project $projectFile
-        exit $LASTEXITCODE
+        $runEnvironment = @{
+            DOTNET_ENVIRONMENT = 'Development'
+            ASPNETCORE_ENVIRONMENT = 'Development'
+        }
+        foreach ($name in @('Igdb:ClientId', 'Igdb:ClientSecret', 'Authentication:Google:ClientId', 'Authentication:Google:ClientSecret')) {
+            if (-not [string]::IsNullOrWhiteSpace($localSecrets[$name])) {
+                $runEnvironment[$name.Replace(':', '__')] = $localSecrets[$name]
+            }
+        }
+        $savedEnvironment = @{}
+        try {
+            foreach ($item in $runEnvironment.GetEnumerator()) {
+                $savedEnvironment[$item.Key] = [Environment]::GetEnvironmentVariable($item.Key)
+                [Environment]::SetEnvironmentVariable($item.Key, $item.Value)
+            }
+            $igdbReady = -not [string]::IsNullOrWhiteSpace($env:Igdb__ClientId) -and -not [string]::IsNullOrWhiteSpace($env:Igdb__ClientSecret)
+            Write-Output ('Local integration settings: ' + (Join-Path $projectRoot '.env'))
+            Write-Output ('Gamertab local environment: Development. Live discovery configured: ' + $igdbReady)
+            dotnet run --project $projectFile --launch-profile Gamertab
+            $runExitCode = $LASTEXITCODE
+        }
+        finally {
+            foreach ($item in $savedEnvironment.GetEnumerator()) {
+                [Environment]::SetEnvironmentVariable($item.Key, $item.Value)
+            }
+        }
+        exit $runExitCode
     }
     'api-test' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))

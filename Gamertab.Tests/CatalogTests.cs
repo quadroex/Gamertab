@@ -125,15 +125,39 @@ public class CatalogTests
     }
 
     [Fact]
-    public async Task ServiceFailureFallsBackToSavedGames()
+    public async Task ServiceFailureShowsAnErrorWithoutSubstitutingSavedGames()
     {
         using var factory = new CatalogFactory();
         factory.Backchannel.Fail = true;
         using var client = factory.Browser();
         var html = await client.GetStringAsync("/");
         Assert.Contains("temporarily unavailable", html);
-        Assert.Contains("Portal 2", html);
-        Assert.Contains("Saved games", html);
+        Assert.DoesNotContain("Portal 2", html);
+        Assert.Contains("Search unavailable", html);
+        Assert.Contains("Try again", html);
+        Assert.Contains("saved=true", html);
+    }
+
+    [Fact]
+    public async Task MissingCredentialsDoNotTurnLiveSearchIntoASavedSearch()
+    {
+        using var factory = new AppFactory();
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync("/?q=Portal");
+        Assert.Contains("Live search is not connected", html);
+        Assert.Contains("Search unavailable", html);
+        Assert.DoesNotContain("/Games/Details/1", html);
+    }
+
+    [Fact]
+    public async Task NonExactRemoteMatchesAreExplainedAndStillCanBeOpened()
+    {
+        using var factory = new CatalogFactory();
+        using var client = factory.Browser();
+        var html = await client.GetStringAsync("/?q=Remote");
+        Assert.Contains("No exact title match on this page", html);
+        Assert.Contains("Remote Game 1001", html);
+        Assert.Contains("/Games/Open/1001", html);
     }
 
     [Fact]

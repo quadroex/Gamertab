@@ -89,6 +89,7 @@ public class CollectionGameInput
 public record CatalogPage(List<Game> Games, string? Query, string? Genre, int Page, bool HasNextPage, bool IsLive, string? Notice = null)
 {
     public List<Recommendation> Recommendations { get; init; } = [];
+    public bool SavedOnly { get; init; }
     public static IReadOnlyDictionary<string, int> Genres { get; } = new Dictionary<string, int>
     {
         ["Adventure"] = 31,

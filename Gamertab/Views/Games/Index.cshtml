@@ -45,12 +45,16 @@
 <section id="catalogue">
     <div class="section-heading">
         <div>
-            <p class="eyebrow">@(Model.IsLive ? "Explore games across platforms" : "Your saved catalogue")</p>
-            <h2>@(string.IsNullOrEmpty(Model.Query) ? (Model.IsLive ? "Popular games" : "Saved games") : "Search results")</h2>
+            <p class="eyebrow">@(Model.SavedOnly ? "Your saved catalogue" : "Explore games across platforms")</p>
+            <h2>@(string.IsNullOrEmpty(Model.Query) ? (Model.SavedOnly ? "Saved games" : "Popular games") : "Search results")</h2>
         </div>
-        <span class="muted small">@(Model.IsLive ? "Live discovery · IGDB" : "Saved games")</span>
+        <span class="muted small">@(Model.SavedOnly ? "Saved games" : Model.IsLive ? "Live discovery · IGDB" : "Live search unavailable")</span>
     </div>
     <form method="get" class="filter-bar" asp-action="Index">
+        @if (Model.SavedOnly)
+        {
+            <input type="hidden" name="saved" value="true" />
+        }
         <label class="visually-hidden" for="catalog-query">Search catalogue</label>
         <input id="catalog-query" name="q" value="@Model.Query" placeholder="Search games, e.g. Elden Ring..." class="form-control" maxlength="100" />
         <label class="visually-hidden" for="genre">Genre</label>
@@ -70,9 +74,19 @@
     @if (Model.Games.Count == 0)
     {
         <div class="empty-state">
-            <h3>No games found</h3>
-            <p>Try another title or genre.</p>
-            <a asp-action="Index" class="btn btn-accent">Clear filters</a>
+            @if (!Model.IsLive && !Model.SavedOnly)
+            {
+                <h3>Search unavailable</h3>
+                <p>The live catalogue could not be reached. Your library and collections are still available.</p>
+                <a asp-action="Index" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre" asp-route-page="@Model.Page" class="btn btn-accent">Try again</a>
+                <a asp-action="Index" asp-route-saved="true" asp-route-q="@Model.Query" class="btn btn-subtle">Search saved games</a>
+            }
+            else
+            {
+                <h3>No games found</h3>
+                <p>Try another title or genre.</p>
+                <a asp-action="Index" class="btn btn-accent">Clear filters</a>
+            }
         </div>
     }
     <div class="game-grid">
@@ -86,12 +100,12 @@
         <nav class="pagination-row" aria-label="Catalogue pages">
             @if (Model.Page > 1)
             {
-                <a asp-route-page="@(Model.Page - 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Previous</a>
+                <a asp-route-page="@(Model.Page - 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre" asp-route-saved="@(Model.SavedOnly ? "true" : null)">Previous</a>
             }
             <span>Page @Model.Page</span>
             @if (Model.HasNextPage)
             {
-                <a asp-route-page="@(Model.Page + 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre">Next</a>
+                <a asp-route-page="@(Model.Page + 1)" asp-route-q="@Model.Query" asp-route-genre="@Model.Genre" asp-route-saved="@(Model.SavedOnly ? "true" : null)">Next</a>
             }
         </nav>
     }

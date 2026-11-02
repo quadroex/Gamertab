@@ -76,7 +76,7 @@ public class CollectionSearchTests
     }
 
     [Fact]
-    public async Task LocalSearchWorksWithoutIgdbAndExcludesSelectedGames()
+    public async Task MissingIgdbDoesNotSubstituteSavedGamesInCollectionSearch()
     {
         using var factory = new AppFactory();
         using var client = await RegisterAsync(factory);
@@ -84,8 +84,8 @@ public class CollectionSearchTests
         var response = await client.GetAsync($"/Collections/GameOptions/{id}?term=Portal");
         Assert.True(response.Headers.CacheControl?.NoStore);
         var options = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("saved:1", options.GetProperty("results")[0].GetProperty("id").GetString());
-        Assert.Contains("Only saved games", options.GetProperty("notice").GetString());
+        Assert.Empty(options.GetProperty("results").EnumerateArray());
+        Assert.Contains("Live search is not connected", options.GetProperty("notice").GetString());
         await client.PostAsync($"/Collections/AddGame/{id}", new FormUrlEncodedContent(new Dictionary<string, string> { ["gameKey"] = "saved:1" }));
         options = await client.GetFromJsonAsync<JsonElement>($"/Collections/GameOptions/{id}?term=Portal");
         Assert.Equal(0, options.GetProperty("results").GetArrayLength());
