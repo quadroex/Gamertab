@@ -26,6 +26,7 @@ public class AppFactory : WebApplicationFactory<Program>
         builder.UseSetting("Authentication:Google:ClientSecret", GoogleEnabled ? "gamertab-test-secret" : "");
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
+            ["NewsUpdates:Enabled"] = "false",
             ["Igdb:ClientId"] = IgdbEnabled ? "igdb-test-client" : "",
             ["Igdb:ClientSecret"] = IgdbEnabled ? "igdb-test-secret" : "",
             ["Authentication:Google:ClientId"] = GoogleEnabled ? "gamertab-test-client" : "",

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'api-test', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'api-test', 'queue-test', 'down', 'status')]
     [string]$Action = 'run'
 )
 
@@ -37,7 +37,7 @@ function Invoke-DevelopmentDocker([string[]]$DockerArguments) {
     if ($LASTEXITCODE -ne 0) { throw 'The Docker command failed.' }
 }
 
-if ($Action -in @('up', 'run', 'api-test')) {
+if ($Action -in @('up', 'run', 'api-test', 'queue-test')) {
     New-Item -ItemType Directory -Force -Path $statePath | Out-Null
     $environmentPath = Join-Path $projectRoot '.env'
     if (-not (Test-Path -LiteralPath $environmentPath)) {
@@ -64,6 +64,10 @@ if ($Action -in @('up', 'run', 'api-test')) {
         }
     }
     $localSecrets['ConnectionStrings:Gamertab'] = "Host=127.0.0.1;Port=15432;Database=gamertab;Username=gamertab;Password=$databasePassword"
+    if ($Action -in @('up', 'run', 'queue-test')) {
+        $localSecrets['ConnectionStrings:QueueStorage'] = 'UseDevelopmentStorage=true'
+        $localSecrets['NewsUpdates:Enabled'] = 'true'
+    }
     $localSecrets | ConvertTo-Json | Set-Content -LiteralPath $secretsFile -Encoding utf8
     Start-DevelopmentWsl
 }
@@ -79,11 +83,11 @@ $composeArguments = @('compose', '--project-directory', $dockerProjectRoot, '-f'
 
 switch ($Action) {
     'up' {
-        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))
-        Write-Output 'The Gamertab database is ready.'
+        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db', 'storage'))
+        Write-Output 'The Gamertab database and local queues are ready.'
     }
     'run' {
-        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))
+        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db', 'storage'))
         dotnet run --project $projectFile
         exit $LASTEXITCODE
     }
@@ -91,6 +95,19 @@ switch ($Action) {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db'))
         & (Join-Path $projectRoot 'api-tests\run.ps1')
         exit $LASTEXITCODE
+    }
+    'queue-test' {
+        Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'storage'))
+        $savedTestConnection = [Environment]::GetEnvironmentVariable('GAMERTAB_QUEUE_TEST_CONNECTION')
+        try {
+            $env:GAMERTAB_QUEUE_TEST_CONNECTION = 'UseDevelopmentStorage=true'
+            dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --filter 'FullyQualifiedName~NewsQueueTests' --verbosity minimal
+            $testExitCode = $LASTEXITCODE
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable('GAMERTAB_QUEUE_TEST_CONNECTION', $savedTestConnection)
+        }
+        exit $testExitCode
     }
     'status' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('ps'))

@@ -15,12 +15,26 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+  storage:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    command: azurite-queue --queueHost 0.0.0.0 --location /data --silent
+    ports:
+      - "127.0.0.1:10001:10001"
+    volumes:
+      - queues:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "const c=require('net').connect(10001,'127.0.0.1');c.once('connect',()=>{c.end();process.exit(0)});c.once('error',()=>process.exit(1));"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
   app:
     profiles: ["full"]
     build: .
     environment:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Gamertab: Host=db;Database=gamertab;Username=gamertab;Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__QueueStorage: UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://storage
+      NewsUpdates__Enabled: "true"
       Igdb__ClientId: ${IGDB_CLIENT_ID:-}
       Igdb__ClientSecret: ${IGDB_CLIENT_SECRET:-}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
@@ -30,5 +44,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      storage:
+        condition: service_healthy
 volumes:
   database:
+  queues:
