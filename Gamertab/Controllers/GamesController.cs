@@ -68,6 +68,7 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
             }
         }
         var storeTask = game.SteamAppId.HasValue ? store.GetAsync(game.SteamAppId.Value, HttpContext.RequestAborted) : Task.FromResult<SteamStoreInfo?>(null);
+        var mediaTask = game.IgdbId.HasValue ? igdb.GetMediaAsync(game.IgdbId.Value, HttpContext.RequestAborted) : Task.FromResult(new GameMedia([], null));
         try
         {
             await news.RefreshAsync(game, database, HttpContext.RequestAborted);
@@ -88,10 +89,17 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
         {
             storeNotice = "Steam prices took too long to load. You can check the store directly.";
         }
+        GameMedia? media = null;
+        try { media = await mediaTask; }
+        catch (HttpRequestException) { ViewData["MediaNotice"] = "Game media is temporarily unavailable. Please try again later."; }
+        catch (TaskCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            ViewData["MediaNotice"] = "Game media took too long to load. Please try again later.";
+        }
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var entry = userId is null ? null : await database.LibraryEntries.FirstOrDefaultAsync(item => item.UserId == userId && item.GameId == id);
         var articles = await database.NewsItems.Where(item => item.GameId == id).OrderByDescending(item => item.PublishedAt).Take(12).ToListAsync();
-        return View(new GamePage(game, entry, articles, igdb.IsConfigured, offer, storeNotice));
+        return View(new GamePage(game, entry, articles, igdb.IsConfigured, offer, storeNotice, media));
     }
 
     [Route("Home/Error")]

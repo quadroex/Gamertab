@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Gamertab.Models;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -56,6 +57,39 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
             game.TimeSubmissions = time.TryGetProperty("count", out var count) ? count.GetInt32() : null;
         }
         return game;
+    }
+
+    public async Task<GameMedia> GetMediaAsync(int id, CancellationToken cancellationToken = default)
+    {
+        if (!IsConfigured || id <= 0)
+            return new GameMedia([], null);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(6));
+        var data = await SendAsync("games", $"fields screenshots.image_id,videos.name,videos.video_id; where id = {id}; limit 1;", timeout.Token);
+        if (data.GetArrayLength() == 0)
+            return new GameMedia([], null);
+        var game = data[0];
+        var screenshots = new List<GameScreenshot>();
+        if (game.TryGetProperty("screenshots", out var images) && images.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var image in images.EnumerateArray())
+            {
+                var imageId = Text(image, "image_id");
+                if (Regex.IsMatch(imageId, "^[A-Za-z0-9_-]{1,100}$"))
+                    screenshots.Add(new GameScreenshot($"https://images.igdb.com/igdb/image/upload/t_screenshot_med/{imageId}.jpg",
+                        $"https://images.igdb.com/igdb/image/upload/t_1080p/{imageId}.jpg"));
+            }
+        }
+        GameVideo? video = null;
+        if (game.TryGetProperty("videos", out var videos) && videos.ValueKind == JsonValueKind.Array)
+        {
+            video = videos.EnumerateArray().Select(item => new GameVideo(Text(item, "video_id"), Text(item, "name")))
+                .Where(item => Regex.IsMatch(item.YouTubeId, "^[A-Za-z0-9_-]{11}$"))
+                .OrderByDescending(item => item.Title.Contains("trailer", StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(item => item.Title.Contains("launch", StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
+        }
+        return new GameMedia(screenshots.Distinct().Take(6).ToList(), video);
     }
 
     public async Task<List<Game>> FindRelatedAsync(IReadOnlyList<Game> favourites, CancellationToken cancellationToken = default)

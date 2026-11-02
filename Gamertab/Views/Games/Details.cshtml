@@ -2,14 +2,31 @@
 @{
     ViewData["Title"] = Model.Game.Name;
     var game = Model.Game;
+    var hasMedia = Model.Media is { Screenshots.Count: > 0 } || Model.Media?.Video is not null;
 }
 
 <a class="back-link" asp-action="Index">← Back to browse</a>
+<nav class="game-sections nav" aria-label="Game sections">
+    <div class="game-section-links">
+        <a class="nav-link" href="#overview">Overview</a>
+        @if (hasMedia)
+        {
+            <a class="nav-link" href="#media">Media</a>
+        }
+        @if (game.SteamAppId.HasValue)
+        {
+            <a class="nav-link" href="#stores">Price</a>
+        }
+        <a class="nav-link" href="#playtime">Playtime</a>
+        <a class="nav-link" href="#news">News</a>
+    </div>
+    <a class="feedback-link" href="https://github.com/quadroex/Gamertab/issues" target="_blank" rel="noopener noreferrer">Feedback ↗</a>
+</nav>
 @if (ViewData["DetailsNotice"] is string detailsNotice)
 {
     <p class="notice" role="status">@detailsNotice</p>
 }
-<section class="detail-hero">
+<section class="detail-hero" id="overview">
     <div class="detail-art">
         @if (!string.IsNullOrEmpty(game.CoverUrl))
         {
@@ -91,9 +108,10 @@
         <strong class="small-fact">@game.Modes.Replace(",", " · ")</strong>
     </div>
 </section>
+<partial name="_GameMedia" model="Model" />
 @if (game.SteamAppId.HasValue)
 {
-<section class="content-panel store-section">
+<section class="content-panel store-section" id="stores">
     <div class="section-heading">
         <div>
             <p class="eyebrow">Find your next game</p>
@@ -126,7 +144,7 @@
     }
 </section>
 }
-<section class="content-panel">
+<section class="content-panel" id="playtime">
     <div class="section-heading">
         <div>
             <p class="eyebrow">Make time for your next game</p>
@@ -149,7 +167,7 @@
     </div>
     <p class="muted small mt-3 mb-0">Estimates from IGDB@(game.TimeSubmissions.HasValue ? $" · {game.TimeSubmissions} submissions" : ""). DLC time is not automatically included.</p>
 </section>
-<section class="news-section">
+<section class="news-section" id="news">
     <div class="section-heading">
         <div>
             <p class="eyebrow">From the source</p>
@@ -176,3 +194,6 @@
         </a>
     }
 </section>
+@section Scripts {
+    <script src="~/js/game-media.js" asp-append-version="true"></script>
+}

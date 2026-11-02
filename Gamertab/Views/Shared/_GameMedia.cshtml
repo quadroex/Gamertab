@@ -1,0 +1,61 @@
+@model GamePage
+@{
+    var media = Model.Media;
+    var video = media?.Video;
+    var screenshots = media?.Screenshots ?? [];
+}
+@if (ViewData["MediaNotice"] is string mediaNotice)
+{
+    <p class="notice" role="status">@mediaNotice</p>
+}
+@if (screenshots.Count > 0 || video is not null)
+{
+    <section class="content-panel game-media" id="media">
+        <div class="media-layout @(video is null || screenshots.Count == 0 ? "media-single" : "")">
+            @if (video is not null)
+            {
+                <div>
+                    <h2>@(video.Title.Contains("trailer", StringComparison.OrdinalIgnoreCase) ? "Trailer" : "Video")</h2>
+                    <div class="trailer-player" data-video-id="@video.YouTubeId" data-video-title="@video.Title">
+                        @if (screenshots.Count > 0 || !string.IsNullOrEmpty(Model.Game.CoverUrl))
+                        {
+                            <img src="@(screenshots.FirstOrDefault()?.PreviewUrl ?? Model.Game.CoverUrl)" alt="" loading="lazy" />
+                        }
+                        <button type="button" class="btn btn-accent video-play">Play video ▶</button>
+                    </div>
+                    <div class="media-caption">
+                        <span>@video.Title</span>
+                        <a href="https://www.youtube.com/watch?v=@video.YouTubeId" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
+                    </div>
+                </div>
+            }
+            @if (screenshots.Count > 0)
+            {
+                <div>
+                    <h2>Screenshots</h2>
+                    <div class="screenshot-grid">
+                        @for (var index = 0; index < screenshots.Count; index++)
+                        {
+                            <a href="@screenshots[index].FullUrl" data-screenshot target="_blank" rel="noopener noreferrer" aria-label="Open screenshot @(index + 1)">
+                                <img src="@screenshots[index].PreviewUrl" alt="@Model.Game.Name screenshot @(index + 1)" loading="lazy" />
+                            </a>
+                        }
+                    </div>
+                    <p class="form-hint">Select an image to view it full size. Media from IGDB.</p>
+                </div>
+            }
+        </div>
+    </section>
+}
+@if (screenshots.Count > 0)
+{
+    <dialog class="screenshot-dialog" aria-label="Screenshot viewer">
+        <div class="screenshot-toolbar">
+            <button class="btn btn-subtle" type="button" data-previous aria-label="Previous screenshot">←</button>
+            <span data-screenshot-count aria-live="polite"></span>
+            <button class="btn btn-subtle" type="button" data-next aria-label="Next screenshot">→</button>
+            <form method="dialog"><button class="btn btn-subtle" type="submit">Close</button></form>
+        </div>
+        <img data-full-screenshot alt="" />
+    </dialog>
+}

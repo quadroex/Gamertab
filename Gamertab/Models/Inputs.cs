@@ -103,7 +103,10 @@ public record CatalogPage(List<Game> Games, string? Query, string? Genre, int Pa
         ["Strategy"] = 15
     };
 }
-public record GamePage(Game Game, LibraryEntry? Entry, List<NewsItem> News, bool IgdbConfigured, SteamStoreInfo? Store = null, string? StoreNotice = null);
+public record GamePage(Game Game, LibraryEntry? Entry, List<NewsItem> News, bool IgdbConfigured, SteamStoreInfo? Store = null, string? StoreNotice = null, GameMedia? Media = null);
+public record GameScreenshot(string PreviewUrl, string FullUrl);
+public record GameVideo(string YouTubeId, string Title);
+public record GameMedia(IReadOnlyList<GameScreenshot> Screenshots, GameVideo? Video);
 public record SteamStoreInfo(bool IsFree, decimal? Price, decimal? OriginalPrice, int DiscountPercent, DateTimeOffset CheckedAt, int? MetacriticScore = null, string? MetacriticUrl = null);
 public record LibraryPage(List<LibraryEntry> Entries, string? Status);
 public record LibraryEditPage(Game Game, LibraryInput Input);
