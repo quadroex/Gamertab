@@ -7,6 +7,20 @@
     <p class="eyebrow accent">Your account</p>
     <h1>Account settings</h1>
     <p class="muted">@Model.Email</p>
+    <h2 class="mt-4">Your plan <span class="tag">@Model.Access.Plan</span></h2>
+    <p>Your library and collections are included in Standard. Library statistics is a Premium feature.</p>
+    @if (Model.Access.CanViewStatistics)
+    {
+        <a class="btn btn-subtle" asp-controller="Library" asp-action="Statistics">View statistics</a>
+    }
+    @if (Model.Access.CanChangePlan)
+    {
+        <form class="plan-controls" asp-action="ChangePlan" method="post">
+            <input type="hidden" name="plan" value="@(Model.Access.Plan == AccountPlan.Standard ? AccountPlan.Premium : AccountPlan.Standard)" />
+            <button class="btn @(Model.Access.Plan == AccountPlan.Standard ? "btn-accent" : "btn-subtle")" type="submit">@(Model.Access.Plan == AccountPlan.Standard ? "Upgrade to Premium" : "Switch to Standard")</button>
+            <p class="form-hint">Demo upgrade. No payment is required. You can switch back to Standard at any time.</p>
+        </form>
+    }
     <h2 class="mt-4">Sign-in methods</h2>
     <p>Email and password · @(Model.HasPassword ? "Enabled" : "Not set up")</p>
     @if (Model.GoogleLinked)

@@ -7,6 +7,7 @@
 <section class="form-panel">
     <p class="eyebrow accent">Your play history</p>
     <h1>@Model.Game.Name</h1>
+    <a class="text-link" asp-action="Journal" asp-route-id="@Context.Request.RouteValues["id"]">Open play journal ↗</a>
     <form method="post" asp-action="Edit" asp-route-id="@Context.Request.RouteValues["id"]">
         <div asp-validation-summary="All" class="text-danger"></div>
         <input asp-for="Input.GameId" type="hidden" />

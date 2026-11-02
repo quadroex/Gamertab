@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers;
 
 [Authorize]
-public class LibraryController(AppDbContext database, RecommendationService recommendations) : Controller
+public class LibraryController(AppDbContext database, RecommendationService recommendations, PlanAccess plans) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -23,6 +23,13 @@ public class LibraryController(AppDbContext database, RecommendationService reco
 
     public async Task<IActionResult> Statistics()
     {
+        Response.Headers.CacheControl = "no-store";
+        var access = await plans.GetAsync(UserId);
+        if (!access.CanViewStatistics)
+        {
+            Response.StatusCode = StatusCodes.Status403Forbidden;
+            return View("PremiumRequired", access);
+        }
         var entries = await database.LibraryEntries.AsNoTracking().Where(entry => entry.UserId == UserId)
             .Select(entry => new { entry.Status, entry.PersonalRating, entry.CompletedOn, entry.Game.Genres }).ToListAsync();
         var statuses = Enum.GetValues<PlayStatus>().Select(status => new StatisticValue(
@@ -101,6 +108,17 @@ public class LibraryController(AppDbContext database, RecommendationService reco
         database.LibraryEntries.Remove(entry);
         await database.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Journal(int id)
+    {
+        Response.Headers.CacheControl = "no-store";
+        var entry = await database.LibraryEntries.AsNoTracking().Include(item => item.Game)
+            .FirstOrDefaultAsync(item => item.Id == id && item.UserId == UserId);
+        if (entry is null)
+            return NotFound();
+        return View(new PlayJournalPage(entry.Id, entry.Game.Name, $"gamertab:journal:v1:{UserId}:{entry.GameId}"));
     }
 
     public async Task<IActionResult> Recommendations() => View(await recommendations.GetAsync(UserId, HttpContext.RequestAborted));

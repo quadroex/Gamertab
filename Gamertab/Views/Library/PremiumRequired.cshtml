@@ -1,0 +1,23 @@
+@model AccountPlanState
+@{
+    ViewData["Title"] = "Library statistics";
+}
+
+<a class="back-link" asp-action="Index">← My library</a>
+<section class="form-panel">
+    <p class="eyebrow accent">Gamertab Premium</p>
+    <h1>More insight into your games</h1>
+    @if (Model.Plan == AccountPlan.Premium)
+    {
+        <p class="muted">Library statistics is not enabled right now. Your games and progress remain available in My library.</p>
+    }
+    else
+    {
+        <p class="muted">Library statistics is a Premium feature. See your play status, top genres, ratings and completed games by month.</p>
+        <p>Your current plan is <strong>@Model.Plan</strong></p>
+    }
+    <div class="action-row">
+        <a class="btn btn-accent" asp-controller="Account" asp-action="Settings">Account settings</a>
+        <a class="btn btn-subtle" asp-action="Index">My library</a>
+    </div>
+</section>

@@ -10,7 +10,7 @@ using static Microsoft.Playwright.Assertions;
 
 namespace Gamertab.Tests;
 
-public class BrowserFactory : AppFactory
+public class BrowserFactory : PlanFactory
 {
     protected override bool IgdbEnabled => true;
 
@@ -19,7 +19,7 @@ public class BrowserFactory : AppFactory
         base.ConfigureWebHost(builder);
         builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["ConnectionStrings:BlobStorage"] = "",
+            ["ConnectionStrings:BlobStorage"] = "UseDevelopmentStorage=true",
             ["ConnectionStrings:QueueStorage"] = ""
         }));
         builder.ConfigureServices(services =>
@@ -86,6 +86,23 @@ public class BrowserFixture : IAsyncLifetime
     public async Task<IBrowserContext> NewContextAsync()
     {
         var context = await Browser.NewContextAsync(new() { BaseURL = BaseUrl, ViewportSize = new() { Width = 1365, Height = 900 }, ReducedMotion = ReducedMotion.Reduce });
+        await ConfigureRoutesAsync(context);
+        return context;
+    }
+
+    public async Task<IBrowserContext> OpenProfileAsync(string path)
+    {
+        var context = await playwright.Chromium.LaunchPersistentContextAsync(path, new()
+        {
+            Channel = Environment.GetEnvironmentVariable("GAMERTAB_TEST_BROWSER") ?? "msedge", Headless = true,
+            BaseURL = BaseUrl, ViewportSize = new() { Width = 1365, Height = 900 }, ReducedMotion = ReducedMotion.Reduce
+        });
+        await ConfigureRoutesAsync(context);
+        return context;
+    }
+
+    private async Task ConfigureRoutesAsync(IBrowserContext context)
+    {
         await context.RouteAsync("**/*", async route =>
         {
             if (route.Request.Url.StartsWith(BaseUrl, StringComparison.Ordinal))
@@ -95,7 +112,6 @@ public class BrowserFixture : IAsyncLifetime
             else
                 await route.FulfillAsync(new() { ContentType = "text/html", Body = "<html><title>Test video</title></html>" });
         });
-        return context;
     }
 
     public async Task DisposeAsync()
@@ -263,6 +279,11 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         await RegisterAsync(page);
         await page.GotoAsync("/Library");
         await page.GetByRole(AriaRole.Link, new() { Name = "Statistics", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "More insight into your games", Exact = true })).ToBeVisibleAsync();
+        await page.GetByRole(AriaRole.Link, new() { Name = "Account settings", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Upgrade to Premium", Exact = true }).ClickAsync();
+        await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "premium-account.png"), FullPage = true });
+        await page.GetByRole(AriaRole.Link, new() { Name = "View statistics", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Your story starts with one game", Exact = true })).ToBeVisibleAsync();
         await Expect(page.Locator("canvas")).ToHaveCountAsync(0);
         await OpenRemoteGameAsync(page);
@@ -289,6 +310,117 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         var visitorPage = await visitor.NewPageAsync();
         await RegisterAsync(visitorPage);
         await visitorPage.GotoAsync("/Library/Statistics");
+        await Expect(visitorPage.GetByRole(AriaRole.Heading, new() { Name = "More insight into your games", Exact = true })).ToBeVisibleAsync();
+        await visitorPage.GotoAsync("/Account/Settings");
+        await visitorPage.GetByRole(AriaRole.Button, new() { Name = "Upgrade to Premium", Exact = true }).ClickAsync();
+        await visitorPage.GetByRole(AriaRole.Link, new() { Name = "View statistics", Exact = true }).ClickAsync();
         await Expect(visitorPage.GetByRole(AriaRole.Heading, new() { Name = "Your story starts with one game", Exact = true })).ToBeVisibleAsync();
+    }
+
+    [Fact]
+    public async Task CoverPreviewReadsTheLocalFileAndRejectsInvalidImagesBeforeSaving()
+    {
+        await using var context = await fixture.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await RegisterAsync(page);
+        await page.GotoAsync("/Collections/Create");
+        var posts = 0;
+        page.Request += (_, request) => { if (request.Method == "POST") posts++; };
+        await page.GetByLabel("Name", new() { Exact = true }).FillAsync("Preview collection");
+        await page.GetByLabel("Upload file", new() { Exact = true }).CheckAsync();
+        var input = page.GetByLabel("Choose an image", new() { Exact = true });
+        await input.SetInputFilesAsync(new FilePayload { Name = "too-large.png", MimeType = "image/png", Buffer = new byte[2 * 1024 * 1024 + 1] });
+        await Expect(page.Locator("[data-file-error]")).ToContainTextAsync("up to 2 MB");
+        await input.SetInputFilesAsync(new FilePayload { Name = "fake.png", MimeType = "image/png", Buffer = "<svg>Not a PNG</svg>"u8.ToArray() });
+        await Expect(page.Locator("[data-file-error]")).ToContainTextAsync("not a PNG or JPEG");
+        var image = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAIAAAAt/+nTAAAATklEQVR4nO3PUQkAIBTAwJfTOCY2giH8OITBAtxm7fN1wwUNaEEDWtCAFjSgBQ1oQQNa0IAWNKAFDWhBA1rQgBY0oAUNaEEDWtCAFjx2AZFlYNPMtHj6AAAAAElFTkSuQmCC");
+        await input.SetInputFilesAsync(new FilePayload { Name = "preview.png", MimeType = "image/png", Buffer = image });
+        await Expect(page.GetByAltText("Selected collection cover", new() { Exact = true })).ToBeVisibleAsync();
+        await Expect(page.Locator("[data-file-info]")).ToContainTextAsync("64 x 32");
+        await Expect(page.Locator("[data-file-error]")).ToBeHiddenAsync();
+        await Expect(page.GetByAltText("Selected collection cover", new() { Exact = true })).ToHaveAttributeAsync("src", new Regex("^blob:"));
+        Assert.True(await input.EvaluateAsync<bool>("input => input.checkValidity()"));
+        Assert.Equal(0, posts);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "collection-file-preview.png"), FullPage = true });
+        await page.GetByLabel("No cover", new() { Exact = true }).CheckAsync();
+        await Expect(page.Locator("[data-file-preview]")).ToBeHiddenAsync();
+        await Expect(input).ToBeDisabledAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Save collection", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Preview collection", Exact = true })).ToBeVisibleAsync();
+        Assert.Equal(1, posts);
+    }
+
+    [Fact]
+    public async Task JournalBlocksCanBeDraggedExportedAndRestoredAfterBrowserRestart()
+    {
+        var root = Path.GetFullPath(fixture.ResultsPath) + Path.DirectorySeparatorChar;
+        var profile = Path.GetFullPath(Path.Combine(root, "journal-profile-" + Guid.NewGuid().ToString("N")));
+        IBrowserContext? context = null;
+        try
+        {
+            context = await fixture.OpenProfileAsync(profile);
+            var page = await context.NewPageAsync();
+            var email = await RegisterAsync(page);
+            await OpenRemoteGameAsync(page);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Add to my library +", Exact = true }).ClickAsync();
+            await page.EmulateMediaAsync(new() { ReducedMotion = ReducedMotion.NoPreference });
+            await page.GetByRole(AriaRole.Link, new() { Name = "Open play journal", Exact = false }).ClickAsync();
+            var journalUrl = page.Url;
+            await page.GetByLabel("Block text", new() { Exact = true }).FillAsync("Session one <img src=x onerror=alert(1)>");
+            await page.GetByRole(AriaRole.Button, new() { Name = "+ Heading", Exact = true }).ClickAsync();
+            await page.GetByLabel("Block text", new() { Exact = true }).Nth(1).FillAsync("Next session");
+            await page.GetByRole(AriaRole.Button, new() { Name = "+ List", Exact = true }).ClickAsync();
+            await page.GetByLabel("Block text", new() { Exact = true }).Nth(2).FillAsync("Finish main story\nFind both endings");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Drag block", Exact = true }).Nth(2)
+                .DragToAsync(page.Locator(".journal-block").First, new() { TargetPosition = new() { X = 10, Y = 10 } });
+            await Expect(page.GetByLabel("Block text", new() { Exact = true }).First).ToHaveValueAsync("Finish main story\nFind both endings");
+            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Saved in this browser");
+            await context.CloseAsync();
+            context = null;
+
+            context = await fixture.OpenProfileAsync(profile);
+            page = await context.NewPageAsync();
+            await page.GotoAsync("/Account/Login");
+            await page.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+            await page.GetByLabel("Password", new() { Exact = true }).FillAsync(Password);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Sign in", Exact = true }).ClickAsync();
+            await Expect(page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true })).ToBeVisibleAsync();
+            await page.GotoAsync(journalUrl);
+            await Expect(page.Locator(".journal-block")).ToHaveCountAsync(3);
+            await Expect(page.GetByLabel("Block text", new() { Exact = true }).First).ToHaveValueAsync("Finish main story\nFind both endings");
+            await Expect(page.GetByLabel("Block text", new() { Exact = true }).Nth(2)).ToHaveValueAsync("Next session");
+            await page.GetByLabel("Show preview", new() { Exact = true }).CheckAsync();
+            await Expect(page.Locator("[data-rendered] li")).ToHaveCountAsync(2);
+            await Expect(page.Locator("[data-rendered] img")).ToHaveCountAsync(0);
+            await Expect(page.Locator("[data-rendered]")).ToContainTextAsync("<img src=x onerror=alert(1)>");
+            await page.GetByRole(AriaRole.Button, new() { Name = "Move block up", Exact = true }).Nth(2).ClickAsync();
+            await Expect(page.GetByLabel("Block text", new() { Exact = true }).Nth(1)).ToHaveValueAsync("Next session");
+            var download = await page.RunAndWaitForDownloadAsync(() => page.GetByRole(AriaRole.Button, new() { Name = "Export Markdown", Exact = true }).ClickAsync());
+            var exported = Path.Combine(fixture.ResultsPath, "play-journal.md");
+            await download.SaveAsAsync(exported);
+            var markdown = await File.ReadAllTextAsync(exported);
+            Assert.StartsWith("- Finish main story\n- Find both endings", markdown);
+            Assert.Contains("# Next session", markdown);
+            await page.GetByLabel("Block text", new() { Exact = true }).Nth(2).FillAsync("Finished the first act. Next time I want to explore the optional areas.");
+            await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Saved in this browser");
+            await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "play-journal.png"), FullPage = true });
+            await page.SetViewportSizeAsync(390, 844);
+            await page.WaitForFunctionAsync("document.documentElement.scrollWidth <= window.innerWidth");
+            await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "play-journal-mobile.png"), FullPage = true });
+            await page.GetByRole(AriaRole.Button, new() { Name = "Sign out", Exact = true }).ClickAsync();
+            await RegisterAsync(page);
+            Assert.Equal(404, (await context.APIRequest.GetAsync(journalUrl)).Status);
+            await OpenRemoteGameAsync(page);
+            await page.GetByRole(AriaRole.Button, new() { Name = "Add to my library +", Exact = true }).ClickAsync();
+            await page.GetByRole(AriaRole.Link, new() { Name = "Open play journal", Exact = false }).ClickAsync();
+            await Expect(page.Locator(".journal-block")).ToHaveCountAsync(1);
+            await Expect(page.GetByLabel("Block text", new() { Exact = true })).ToHaveValueAsync("");
+        }
+        finally
+        {
+            if (context is not null) await context.CloseAsync();
+            if (profile.StartsWith(root, StringComparison.OrdinalIgnoreCase) && Directory.Exists(profile))
+                Directory.Delete(profile, true);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Gamertab.Models;
+using Gamertab.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Gamertab.Controllers;
 
-public class AccountController(UserManager<IdentityUser> users, SignInManager<IdentityUser> signIn) : Controller
+public class AccountController(UserManager<IdentityUser> users, SignInManager<IdentityUser> signIn, PlanAccess plans) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Register()
@@ -118,7 +119,19 @@ public class AccountController(UserManager<IdentityUser> users, SignInManager<Id
             return Challenge();
         var logins = await users.GetLoginsAsync(user);
         return View(new AccountSettingsPage(user.Email ?? "", await users.HasPasswordAsync(user),
-            logins.Any(login => login.LoginProvider == "Google"), await GoogleAvailableAsync()));
+            logins.Any(login => login.LoginProvider == "Google"), await GoogleAvailableAsync(), await plans.GetAsync(user.Id)));
+    }
+
+    [Authorize, HttpPost]
+    public async Task<IActionResult> ChangePlan(AccountPlan plan)
+    {
+        if (!plans.CanChangePlan)
+            return NotFound();
+        if (!ModelState.IsValid || !Enum.IsDefined(plan))
+            return BadRequest();
+        await plans.SetAsync(User.FindFirstValue(ClaimTypes.NameIdentifier)!, plan);
+        TempData["Message"] = $"Your demo plan is now {plan}.";
+        return RedirectToAction(nameof(Settings));
     }
 
     [Authorize, HttpPost]

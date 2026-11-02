@@ -20,6 +20,7 @@ public class StatisticsTests
         using var scope = factory.Services.CreateScope();
         var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         database.Users.AddRange(new IdentityUser { Id = "owner", UserName = "owner" }, new IdentityUser { Id = "other", UserName = "other" });
+        database.UserPlans.Add(new UserPlan { UserId = "owner", Plan = AccountPlan.Premium });
         var games = await database.Games.OrderBy(game => game.Id).ToListAsync();
         games[0].Genres = "Puzzle,puzzle,Adventure";
         games[1].Genres = "Puzzle,Role-playing";
@@ -36,7 +37,7 @@ public class StatisticsTests
             new LibraryEntry { UserId = "owner", GameId = games[4].Id, Status = PlayStatus.Completed },
             new LibraryEntry { UserId = "other", GameId = games[5].Id, Status = PlayStatus.Completed, PersonalRating = 10, CompletedOn = today });
         await database.SaveChangesAsync();
-        var controller = new LibraryController(database, scope.ServiceProvider.GetRequiredService<RecommendationService>())
+        var controller = new LibraryController(database, scope.ServiceProvider.GetRequiredService<RecommendationService>(), scope.ServiceProvider.GetRequiredService<PlanAccess>())
         {
             ControllerContext = new ControllerContext
             {

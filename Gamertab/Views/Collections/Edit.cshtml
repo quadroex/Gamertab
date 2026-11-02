@@ -22,7 +22,7 @@
             <p class="form-hint">Choose one way to set the cover. It is saved with the collection.</p>
             @if (ViewData["CurrentCoverUrl"] is string currentCover && !string.IsNullOrEmpty(currentCover))
             {
-                <img class="collection-cover-preview" src="@currentCover" alt="Current collection cover" />
+                <img class="collection-cover-preview" src="@currentCover" alt="Current collection cover" data-current-cover />
             }
             <div class="cover-modes">
                 <label class="check-label"><input type="radio" name="coverSource" value="link" checked="@(coverSource == "link")" /> Image link</label>
@@ -36,8 +36,14 @@
             </div>
             <div data-cover-source="file">
                 <label for="cover-file" class="form-label">Choose an image</label>
-                <input id="cover-file" name="coverFile" type="file" class="form-control" accept="image/png,image/jpeg" disabled="@(!canUpload)" />
-                <p class="form-hint">PNG or JPEG, up to 2 MB.@(hasUpload ? " Leave the file empty to keep the current image." : "")</p>
+                <input id="cover-file" name="coverFile" type="file" class="form-control" accept="image/png,image/jpeg" aria-describedby="cover-file-hint cover-file-error" disabled="@(!canUpload)" />
+                <p id="cover-file-hint" class="form-hint">PNG or JPEG, up to 2 MB.@(hasUpload ? " Leave the file empty to keep the current image." : "")</p>
+                <p id="cover-file-error" class="text-danger small" role="alert" data-file-error hidden></p>
+                <figure class="selected-cover" data-file-preview hidden>
+                    <img class="collection-cover-preview" alt="Selected collection cover" />
+                    <figcaption class="form-hint" data-file-info></figcaption>
+                    <p class="form-hint">Save the collection to apply this cover.</p>
+                </figure>
             </div>
             @if (!canUpload)
             {

@@ -54,6 +54,7 @@ builder.Services.AddSingleton<GameSearchIndex>();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddScoped<CollectionCoverService>();
+builder.Services.AddScoped<PlanAccess>();
 builder.Services.AddHostedService<NewsUpdateWorker>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<SteamNewsClient>(client => client.Timeout = TimeSpan.FromSeconds(15));

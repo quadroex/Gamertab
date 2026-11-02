@@ -48,6 +48,7 @@
                 <span class="personal-rating">@entry.PersonalRating.Value.ToString("0.#")<small>/10</small></span>
             }
             <a asp-action="Edit" asp-route-id="@entry.Id" class="btn btn-subtle">Edit</a>
+            <a asp-action="Journal" asp-route-id="@entry.Id" class="btn btn-subtle">Journal</a>
             <form asp-action="Delete" asp-route-id="@entry.Id" method="post">
                 <button class="quiet-button" type="submit">Remove</button>
             </form>

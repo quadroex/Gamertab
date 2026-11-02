@@ -1,0 +1,60 @@
+@model PlayJournalPage
+@{
+    ViewData["Title"] = Model.GameName + " journal";
+}
+
+<a class="back-link" asp-action="Edit" asp-route-id="@Model.EntryId">← @Model.GameName</a>
+<section class="play-journal" data-journal data-storage-key="@Model.StorageKey" data-game-name="@Model.GameName">
+    <div class="section-heading page-heading">
+        <div>
+            <p class="eyebrow accent">Your play journal</p>
+            <h1>@Model.GameName</h1>
+            <p class="muted">Keep session notes, unfinished quests and ideas in one place.</p>
+        </div>
+        <button type="button" class="btn btn-subtle" data-export>Export Markdown</button>
+    </div>
+    <div class="journal-toolbar" aria-label="Journal tools">
+        <div class="journal-add-controls">
+            <button type="button" class="btn btn-subtle" data-add="paragraph">+ Text</button>
+            <button type="button" class="btn btn-subtle" data-add="heading">+ Heading</button>
+            <button type="button" class="btn btn-subtle" data-add="list">+ List</button>
+        </div>
+        <label class="check-label"><input type="checkbox" data-preview-toggle /> Show preview</label>
+    </div>
+    <p class="form-hint">Saved automatically in this browser for your account. These journal notes do not sync to other devices. Drag a block or use its arrow buttons to reorder it.</p>
+    <p class="journal-status" role="status" aria-live="polite" data-save-status></p>
+    <p class="notice" role="alert" data-journal-error hidden></p>
+    <div class="journal-layout">
+        <div class="journal-blocks" aria-label="Journal blocks" data-blocks></div>
+        <section class="content-panel journal-preview" aria-label="Journal preview" data-preview hidden>
+            <h2>Preview</h2>
+            <div data-rendered></div>
+        </section>
+    </div>
+    <details class="journal-markdown">
+        <summary>Markdown source</summary>
+        <pre><code data-markdown></code></pre>
+    </details>
+    <template data-block-template>
+        <article class="journal-block">
+            <div class="journal-block-tools">
+                <button type="button" class="quiet-button journal-drag" draggable="true" aria-label="Drag block" title="Drag to reorder">Drag</button>
+                <select class="form-select" aria-label="Block type">
+                    <option value="paragraph">Text</option>
+                    <option value="heading">Heading</option>
+                    <option value="list">List</option>
+                </select>
+                <div class="journal-block-actions">
+                    <button type="button" class="quiet-button" data-up aria-label="Move block up">↑</button>
+                    <button type="button" class="quiet-button" data-down aria-label="Move block down">↓</button>
+                    <button type="button" class="quiet-button" data-remove aria-label="Remove block">Remove</button>
+                </div>
+            </div>
+            <textarea class="form-control" maxlength="10000" rows="3" aria-label="Block text"></textarea>
+        </article>
+    </template>
+</section>
+
+@section Scripts {
+    <script src="~/js/play-journal.js" asp-append-version="true"></script>
+}
