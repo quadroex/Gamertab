@@ -26,6 +26,7 @@
                 <span class="tag">@genre</span>
             }
         </div>
+        <p class="platform-list"><span class="muted">Platforms</span> @(string.IsNullOrEmpty(game.Platforms) ? "Not available" : game.Platforms.Replace(",", " · "))</p>
         <div class="action-row">
             @if (Model.Entry is not null)
             {
@@ -65,6 +66,22 @@
         <span>IGDB critic rating</span>
         <strong>@(game.CriticRating?.ToString("0.0") ?? "Not available")</strong>
     </div>
+    @if (Model.Store?.MetacriticScore is int metacritic)
+    {
+        <div class="fact">
+            <span>Metacritic · PC</span>
+            <strong>
+                @if (Model.Store.MetacriticUrl is string criticUrl)
+                {
+                    <a href="@criticUrl" target="_blank" rel="noopener noreferrer">@metacritic<small>/100</small></a>
+                }
+                else
+                {
+                    @metacritic<small>/100</small>
+                }
+            </strong>
+        </div>
+    }
     <div class="fact">
         <span>Age ratings</span>
         <strong class="small-fact">@(string.IsNullOrEmpty(game.AgeRatings) ? "Not available" : game.AgeRatings)</strong>
@@ -74,6 +91,41 @@
         <strong class="small-fact">@game.Modes.Replace(",", " · ")</strong>
     </div>
 </section>
+@if (game.SteamAppId.HasValue)
+{
+<section class="content-panel store-section">
+    <div class="section-heading">
+        <div>
+            <p class="eyebrow">Find your next game</p>
+            <h2>Where to play</h2>
+        </div>
+        <span class="muted small">Steam · US store · USD</span>
+    </div>
+    @if (Model.Store is not null && game.SteamAppId.HasValue)
+    {
+        <div class="store-offer">
+            <strong>Steam</strong>
+            <div class="store-price">
+                @if (Model.Store.OriginalPrice.HasValue && !Model.Store.IsFree)
+                {
+                    <del>$@Model.Store.OriginalPrice.Value.ToString("0.00")</del>
+                }
+                <strong>@(Model.Store.IsFree ? "Free to play" : Model.Store.Price.HasValue ? $"${Model.Store.Price:0.00}" : "Price unavailable")</strong>
+                @if (Model.Store.DiscountPercent > 0 && Model.Store.Price.HasValue && !Model.Store.IsFree)
+                {
+                    <span class="tag">-@Model.Store.DiscountPercent%</span>
+                }
+            </div>
+            <a class="btn btn-subtle" href="https://store.steampowered.com/app/@game.SteamAppId?cc=us" target="_blank" rel="noopener noreferrer">Open store ↗</a>
+        </div>
+        <p class="form-hint">Checked @Model.Store.CheckedAt.ToString("dd MMM yyyy HH:mm") UTC. Prices and availability may differ in your region.</p>
+    }
+    else
+    {
+        <p class="muted mb-0">@(Model.StoreNotice ?? "A US price is not available for this game right now.")</p>
+    }
+</section>
+}
 <section class="content-panel">
     <div class="section-heading">
         <div>

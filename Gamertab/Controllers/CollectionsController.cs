@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Azure;
 using Gamertab.Data;
 using Gamertab.Models;
 using Gamertab.Services;
@@ -16,17 +17,30 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog, C
     public async Task<IActionResult> Index() => View(await database.Collections.Include(collection => collection.Items).Where(collection => collection.UserId == UserId).OrderBy(collection => collection.Name).ToListAsync());
 
     [HttpGet]
-    public IActionResult Create() => View("Edit", new CollectionInput());
-
-    [HttpPost]
-    public async Task<IActionResult> Create(CollectionInput input)
+    public IActionResult Create()
     {
-        if (!ModelState.IsValid)
+        PrepareCoverForm(null);
+        return View("Edit", new CollectionInput());
+    }
+
+    [HttpPost, RequestSizeLimit(CollectionCoverService.MaxBytes + 65536)]
+    public async Task<IActionResult> Create(CollectionInput input, string coverSource = "link", IFormFile? coverFile = null)
+    {
+        if (!ValidateCover(input, coverSource, coverFile, null))
+        {
+            PrepareCoverForm(null, coverSource);
             return View("Edit", input);
+        }
         var collection = new GameCollection { UserId = UserId };
         input.ApplyTo(collection);
         database.Collections.Add(collection);
         await database.SaveChangesAsync();
+        if (!await SaveCoverAsync(collection, coverSource, coverFile))
+        {
+            await covers.DeleteCollectionAsync(collection);
+            PrepareCoverForm(null, coverSource);
+            return View("Edit", input);
+        }
         return RedirectToAction(nameof(Details), new { id = collection.Id });
     }
 
@@ -40,15 +54,16 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog, C
         return View(new CollectionInput { Name = collection.Name, Description = collection.Description, CoverUrl = collection.CoverUrl });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> Edit(int id, CollectionInput input)
+    [HttpPost, RequestSizeLimit(CollectionCoverService.MaxBytes + 65536)]
+    public async Task<IActionResult> Edit(int id, CollectionInput input, string? coverSource = null, IFormFile? coverFile = null)
     {
         var collection = await database.Collections.FirstOrDefaultAsync(item => item.Id == id && item.UserId == UserId);
         if (collection is null)
             return NotFound();
-        if (!ModelState.IsValid)
+        coverSource ??= collection.CoverBlobName is null ? "link" : "file";
+        if (!ValidateCover(input, coverSource, coverFile, collection) || !await SaveCoverAsync(collection, coverSource, coverFile))
         {
-            PrepareCoverForm(collection);
+            PrepareCoverForm(collection, coverSource);
             return View(input);
         }
         input.ApplyTo(collection);
@@ -148,10 +163,44 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog, C
         return RedirectToAction(nameof(Index));
     }
 
-    private void PrepareCoverForm(GameCollection collection)
+    private bool ValidateCover(CollectionInput input, string source, IFormFile? file, GameCollection? collection)
+    {
+        if (source is not ("link" or "file" or "none"))
+            ModelState.AddModelError("coverSource", "Choose an image link, a file or no cover.");
+        if (source != "link")
+        {
+            input.CoverUrl = null;
+            ModelState.Remove(nameof(CollectionInput.CoverUrl));
+        }
+        if (source == "file" && file is null && collection?.CoverBlobName is null)
+            ModelState.AddModelError("coverFile", "Choose a PNG or JPEG image.");
+        if (source == "file" && file is not null && !covers.IsConfigured)
+            ModelState.AddModelError("coverFile", "Image uploads are temporarily unavailable. You can use an image link instead.");
+        return ModelState.IsValid;
+    }
+
+    private async Task<bool> SaveCoverAsync(GameCollection collection, string source, IFormFile? file)
+    {
+        try
+        {
+            if (source == "file" && file is not null)
+                await covers.UploadAsync(collection, file, HttpContext.RequestAborted);
+            else if (source != "file")
+                await covers.RemoveAsync(collection);
+            return true;
+        }
+        catch (ArgumentException exception) { ModelState.AddModelError("coverFile", exception.Message); }
+        catch (InvalidOperationException exception) { ModelState.AddModelError("coverFile", exception.Message); }
+        catch (RequestFailedException) { ModelState.AddModelError("coverFile", "Image uploads are temporarily unavailable. Please try again later."); }
+        return false;
+    }
+
+    private void PrepareCoverForm(GameCollection? collection, string? source = null)
     {
         ViewData["CanUploadCover"] = covers.IsConfigured;
-        if (collection.CoverBlobName is not null)
-            ViewData["UploadedCoverUrl"] = Url.RouteUrl("CollectionCover", new { id = collection.Id });
+        ViewData["CoverSource"] = source ?? (collection?.CoverBlobName is not null ? "file" :
+            collection is not null && string.IsNullOrEmpty(collection.CoverUrl) ? "none" : "link");
+        ViewData["HasUploadedCover"] = collection?.CoverBlobName is not null;
+        ViewData["CurrentCoverUrl"] = collection?.CoverBlobName is not null ? Url.RouteUrl("CollectionCover", new { id = collection.Id }) : collection?.CoverUrl;
     }
 }

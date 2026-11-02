@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Services;
 
-public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheStore outputCache, GameSearchIndex searchIndex)
+public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheStore outputCache, GameSearchIndex searchIndex, ILogger<GameCatalog> logger)
 {
     public const string CacheTag = "games";
 
@@ -32,9 +32,10 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
                 var gamesOnPage = results.Take(12).OrderByDescending(game => game.Name.Equals(query, StringComparison.OrdinalIgnoreCase)).ToList();
                 return new CatalogPage(gamesOnPage, query, genre, page, results.Count > 12, true);
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException exception)
             {
-                notice = "The live catalogue is temporarily unavailable. Showing saved games instead.";
+                logger.LogWarning(exception, "Live game discovery failed. HTTP status {StatusCode}.", exception.StatusCode);
+                notice = "Live search is temporarily unavailable. Only saved games can be searched right now. Please try again later.";
             }
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -43,7 +44,7 @@ public class GameCatalog(AppDbContext database, IgdbClient igdb, IOutputCacheSto
         }
         else
         {
-            notice = "Showing the saved catalogue. Live discovery will be available when the service is connected.";
+            notice = "Live search is not connected. Only saved games are available right now.";
         }
 
         var local = database.Games.AsNoTracking();

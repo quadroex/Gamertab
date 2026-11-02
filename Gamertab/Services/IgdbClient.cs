@@ -11,7 +11,7 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
 {
     private static readonly SemaphoreSlim RequestGate = new(1, 1);
     private static DateTimeOffset nextRequestAt;
-    private const string Fields = "name,summary,cover.url,genres.name,themes.name,game_modes.name,platforms.name,first_release_date,rating,aggregated_rating,similar_games,external_games.uid,external_games.external_game_source.name,age_ratings.organization.name,age_ratings.rating_category.rating";
+    private const string Fields = "name,summary,cover.url,genres.name,themes.name,game_modes.name,platforms.name,player_perspectives.name,first_release_date,rating,aggregated_rating,similar_games,external_games.uid,external_games.external_game_source.name,age_ratings.organization.name,age_ratings.rating_category.rating";
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(configuration["Igdb:ClientId"]) &&
         !string.IsNullOrWhiteSpace(configuration["Igdb:ClientSecret"]);
@@ -20,7 +20,7 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
     {
         if (!IsConfigured)
             return [];
-        var filter = "platforms = (6) & game_type = (0,4,8,9,10,11) & version_parent = null";
+        var filter = "game_type = (0,4,8,9,10,11) & version_parent = null";
         if (!string.IsNullOrEmpty(genre) && CatalogPage.Genres.TryGetValue(genre, out var genreId))
             filter += $" & genres = ({genreId})";
         var search = string.IsNullOrWhiteSpace(query)
@@ -56,6 +56,25 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
             game.TimeSubmissions = time.TryGetProperty("count", out var count) ? count.GetInt32() : null;
         }
         return game;
+    }
+
+    public async Task<List<Game>> FindRelatedAsync(IReadOnlyList<Game> favourites, CancellationToken cancellationToken = default)
+    {
+        static string[] Values(IEnumerable<string> values) => values.SelectMany(value => value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)).Distinct().Take(4).ToArray();
+        var genres = Values(favourites.Select(game => game.Genres)).Where(value => value is not ("Adventure" or "Indie")).ToArray();
+        var themes = Values(favourites.Select(game => game.Themes)).Where(value => value != "Action").ToArray();
+        var perspectives = Values(favourites.Select(game => game.Perspectives));
+        if (!IsConfigured || (genres.Length == 0 && themes.Length == 0))
+            return [];
+        var filter = "version_parent = null & game_type = (0,8,9) & rating_count >= 5";
+        if (genres.Length > 0)
+            filter += " & genres.name = (" + string.Join(',', genres.Select(value => JsonSerializer.Serialize(value))) + ")";
+        if (themes.Length > 0)
+            filter += " & themes.name = (" + string.Join(',', themes.Select(value => JsonSerializer.Serialize(value))) + ")";
+        if (perspectives.Length > 0)
+            filter += " & player_perspectives.name = (" + string.Join(',', perspectives.Select(value => JsonSerializer.Serialize(value))) + ")";
+        var data = await SendAsync("games", $"fields {Fields}; where {filter}; sort rating desc; limit 30;", cancellationToken);
+        return data.EnumerateArray().Select(ParseGame).ToList();
     }
 
     private async Task<JsonElement> SendAsync(string endpoint, string query, CancellationToken cancellationToken)
@@ -127,6 +146,7 @@ public class IgdbClient(HttpClient http, IConfiguration configuration, IMemoryCa
             Themes = Names(data, "themes"),
             Modes = Names(data, "game_modes"),
             Platforms = Names(data, "platforms"),
+            Perspectives = Names(data, "player_perspectives"),
             UserRating = Number(data, "rating"),
             CriticRating = Number(data, "aggregated_rating"),
             DataSource = "IGDB"

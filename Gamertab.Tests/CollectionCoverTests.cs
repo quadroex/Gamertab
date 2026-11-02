@@ -78,6 +78,58 @@ public class CollectionCoverTests
     }
 
     [BlobFact]
+    public async Task CollectionFormCreatesAnUploadKeepsItOnEditAndSwitchesToALinkOrNoCover()
+    {
+        using var factory = new CoverFactory();
+        try
+        {
+            using var client = await factory.RegisterAsync();
+            using var body = new MultipartFormDataContent();
+            body.Add(new StringContent("Weekend."), "Name");
+            body.Add(new StringContent("Keep this description."), "Description");
+            body.Add(new StringContent("file"), "coverSource");
+            body.Add(new ByteArrayContent(Png), "coverFile", "cover.png");
+            var created = await client.PostAsync("/Collections/Create", body);
+            Assert.Equal(HttpStatusCode.Redirect, created.StatusCode);
+            var id = int.Parse(created.Headers.Location!.OriginalString.Split('/').Last());
+            var blobName = await factory.BlobNameAsync(id);
+            Assert.Equal(Png, await client.GetByteArrayAsync($"/api/collections/{id}/cover"));
+            var edited = await client.PostAsync($"/Collections/Edit/{id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Name"] = "Weekend.", ["Description"] = "Keep this description.", ["coverSource"] = "file"
+            }));
+            Assert.Equal(HttpStatusCode.Redirect, edited.StatusCode);
+            Assert.Equal(blobName, await factory.BlobNameAsync(id));
+            using var invalid = new MultipartFormDataContent();
+            invalid.Add(new StringContent("Invalid new collection"), "Name");
+            invalid.Add(new StringContent("file"), "coverSource");
+            invalid.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("invalid image")), "coverFile", "fake.png");
+            Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/Collections/Create", invalid)).StatusCode);
+            var collections = await client.GetFromJsonAsync<JsonElement>("/api/collections");
+            Assert.Equal(1, collections.GetArrayLength());
+            Assert.Equal("Weekend.", collections[0].GetProperty("name").GetString());
+            edited = await client.PostAsync($"/Collections/Edit/{id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Name"] = "Weekend.", ["coverSource"] = "link", ["CoverUrl"] = "https://example.test/new.png"
+            }));
+            Assert.Equal(HttpStatusCode.Redirect, edited.StatusCode);
+            Assert.Null(await factory.BlobNameAsync(id));
+            Assert.False((await factory.Container.GetBlobClient(blobName).ExistsAsync()).Value);
+            var collection = await client.GetFromJsonAsync<JsonElement>($"/api/collections/{id}");
+            Assert.Equal("https://example.test/new.png", collection.GetProperty("coverUrl").GetString());
+            edited = await client.PostAsync($"/Collections/Edit/{id}", new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["Name"] = "Weekend.", ["coverSource"] = "none", ["CoverUrl"] = "ignored unselected link"
+            }));
+            Assert.Equal(HttpStatusCode.Redirect, edited.StatusCode);
+            collection = await client.GetFromJsonAsync<JsonElement>($"/api/collections/{id}");
+            Assert.Equal("", collection.GetProperty("coverUrl").GetString());
+            Assert.Contains("value=\"none\" checked=\"checked\"", await client.GetStringAsync($"/Collections/Edit/{id}"));
+        }
+        finally { await factory.Container.DeleteIfExistsAsync(); }
+    }
+
+    [BlobFact]
     public async Task CoverCanBeUploadedReplacedAndRemovedWithoutChangingTheImageLink()
     {
         using var factory = new CoverFactory();

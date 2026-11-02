@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Gamertab.Models;
 
@@ -15,6 +16,8 @@ public class Game
     public string Themes { get; set; } = "";
     public string Modes { get; set; } = "";
     public string Platforms { get; set; } = "";
+    [NotMapped]
+    public string Perspectives { get; set; } = "";
     public DateOnly? ReleasedOn { get; set; }
     public double? UserRating { get; set; }
     public double? CriticRating { get; set; }

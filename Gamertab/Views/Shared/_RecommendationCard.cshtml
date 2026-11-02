@@ -1,0 +1,20 @@
+@model Recommendation
+@{
+    var action = Model.Game.Id > 0 ? "Details" : "Open";
+    var id = Model.Game.Id > 0 ? Model.Game.Id : Model.Game.IgdbId;
+}
+<article class="game-card">
+    <a class="game-art" asp-controller="Games" asp-action="@action" asp-route-id="@id">
+        @if (!string.IsNullOrEmpty(Model.Game.CoverUrl))
+        {
+            <img src="@Model.Game.CoverUrl" alt="@Model.Game.Name cover" loading="lazy" />
+        }
+        <span class="art-shade"></span>
+    </a>
+    <div class="game-copy">
+        <p class="eyebrow accent">Picked for you</p>
+        <h2><a asp-controller="Games" asp-action="@action" asp-route-id="@id">@Model.Game.Name</a></h2>
+        <p class="card-summary">@Model.Reason</p>
+        <a class="text-link" asp-controller="Games" asp-action="@action" asp-route-id="@id">View game ↗</a>
+    </div>
+</article>

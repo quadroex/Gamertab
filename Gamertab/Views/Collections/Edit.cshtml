@@ -1,6 +1,9 @@
 @model CollectionInput
 @{
     var creating = Context.Request.RouteValues["action"]?.ToString() == "Create";
+    var coverSource = ViewData["CoverSource"] as string ?? "link";
+    var hasUpload = ViewData["HasUploadedCover"] is true;
+    var canUpload = ViewData["CanUploadCover"] is true;
     ViewData["Title"] = creating ? "New collection" : "Edit collection";
 }
 
@@ -8,45 +11,45 @@
 <section class="form-panel">
     <p class="eyebrow accent">Made by you</p>
     <h1>@ViewData["Title"]</h1>
-    <form method="post" asp-action="@(creating ? "Create" : "Edit")" asp-route-id="@Context.Request.RouteValues["id"]">
+    <form method="post" asp-action="@(creating ? "Create" : "Edit")" asp-route-id="@Context.Request.RouteValues["id"]" enctype="multipart/form-data">
         <div asp-validation-summary="All" class="text-danger"></div>
         <label asp-for="Name" class="form-label"></label>
         <input asp-for="Name" class="form-control" placeholder="Games for a rainy weekend" />
         <label asp-for="Description" class="form-label"></label>
         <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-        <label asp-for="CoverUrl" class="form-label">Cover image URL</label>
-        <input asp-for="CoverUrl" class="form-control" placeholder="https://..." />
-        <p class="form-hint">Optional. Use a direct HTTPS link to an image.</p>
+        <fieldset class="collection-cover-editor" data-cover-editor data-has-upload="@hasUpload.ToString().ToLowerInvariant()">
+            <legend>Collection cover</legend>
+            <p class="form-hint">Choose one way to set the cover. It is saved with the collection.</p>
+            @if (ViewData["CurrentCoverUrl"] is string currentCover && !string.IsNullOrEmpty(currentCover))
+            {
+                <img class="collection-cover-preview" src="@currentCover" alt="Current collection cover" />
+            }
+            <div class="cover-modes">
+                <label class="check-label"><input type="radio" name="coverSource" value="link" checked="@(coverSource == "link")" /> Image link</label>
+                <label class="check-label"><input type="radio" name="coverSource" value="file" checked="@(coverSource == "file")" disabled="@(!canUpload && !hasUpload)" /> Upload file</label>
+                <label class="check-label"><input type="radio" name="coverSource" value="none" checked="@(coverSource == "none")" /> No cover</label>
+            </div>
+            <div data-cover-source="link">
+                <label asp-for="CoverUrl" class="form-label">Image URL</label>
+                <input asp-for="CoverUrl" class="form-control" placeholder="https://..." />
+                <p class="form-hint">Use a direct HTTPS link to an image.</p>
+            </div>
+            <div data-cover-source="file">
+                <label for="cover-file" class="form-label">Choose an image</label>
+                <input id="cover-file" name="coverFile" type="file" class="form-control" accept="image/png,image/jpeg" disabled="@(!canUpload)" />
+                <p class="form-hint">PNG or JPEG, up to 2 MB.@(hasUpload ? " Leave the file empty to keep the current image." : "")</p>
+            </div>
+            @if (!canUpload)
+            {
+                <p class="form-hint">File uploads are currently unavailable. You can use an image link.</p>
+            }
+        </fieldset>
         <div class="action-row">
             <button type="submit" class="btn btn-accent">Save collection</button>
             <a class="btn btn-subtle" asp-action="Index">Cancel</a>
         </div>
     </form>
-    @if (!creating)
-    {
-        <div class="collection-cover-editor">
-            <h2>Collection cover</h2>
-            @if (ViewData["UploadedCoverUrl"] is string uploadedCoverUrl)
-            {
-                <img class="collection-cover-preview" src="@uploadedCoverUrl" alt="Current collection cover" />
-                <p class="form-hint">Your uploaded image takes priority over the image link.</p>
-                <form asp-route="RemoveCollectionCover" asp-route-id="@Context.Request.RouteValues["id"]" asp-route-returnToEdit="true" method="post">
-                    <button class="quiet-button" type="submit">Remove uploaded cover</button>
-                </form>
-            }
-            @if (ViewData["CanUploadCover"] is true)
-            {
-                <form asp-route="UploadCollectionCover" asp-route-id="@Context.Request.RouteValues["id"]" asp-route-returnToEdit="true" method="post" enctype="multipart/form-data">
-                    <label for="collection-cover" class="form-label">Choose an image</label>
-                    <input id="collection-cover" name="cover" type="file" class="form-control" accept="image/png,image/jpeg" required />
-                    <p class="form-hint">PNG or JPEG, up to 2 MB. Uploading replaces the previous image.</p>
-                    <button class="btn btn-subtle" type="submit">Upload cover</button>
-                </form>
-            }
-            else
-            {
-                <p class="form-hint">Image uploads are currently unavailable. You can use an image link above.</p>
-            }
-        </div>
-    }
 </section>
+@section Scripts {
+    <script src="~/js/collection-cover.js" asp-append-version="true"></script>
+}

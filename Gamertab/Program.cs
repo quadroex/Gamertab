@@ -57,6 +57,7 @@ builder.Services.AddScoped<CollectionCoverService>();
 builder.Services.AddHostedService<NewsUpdateWorker>();
 builder.Services.AddHttpClient<IgdbClient>(client => client.Timeout = TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<SteamNewsClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddHttpClient<SteamStoreClient>(client => client.Timeout = TimeSpan.FromSeconds(6));
 
 var app = builder.Build();
 

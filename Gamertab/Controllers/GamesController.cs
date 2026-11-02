@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Controllers;
 
-public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsClient news, GameCatalog catalog) : Controller
+public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsClient news, GameCatalog catalog, RecommendationService recommendations, SteamStoreClient store) : Controller
 {
     public async Task<IActionResult> Index(string? q, string? genre, int page = 1)
     {
@@ -17,7 +17,11 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
             return BadRequest();
         if (q?.Length == 1)
             return View(new CatalogPage([], q, genre, page, false, false, "Enter at least two characters to search."));
-        return View(await catalog.BrowseAsync(q, genre, page, HttpContext.RequestAborted));
+        var result = await catalog.BrowseAsync(q, genre, page, HttpContext.RequestAborted);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is not null && string.IsNullOrEmpty(q) && string.IsNullOrEmpty(genre) && page == 1)
+            result = result with { Recommendations = await recommendations.GetAsync(userId, HttpContext.RequestAborted) };
+        return View(result);
     }
 
     public async Task<IActionResult> Open(int id)
@@ -60,6 +64,7 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
                 ViewData["DetailsNotice"] = "Live details took too long to load. Showing saved information.";
             }
         }
+        var storeTask = game.SteamAppId.HasValue ? store.GetAsync(game.SteamAppId.Value, HttpContext.RequestAborted) : Task.FromResult<SteamStoreInfo?>(null);
         try
         {
             await news.RefreshAsync(game, database, HttpContext.RequestAborted);
@@ -72,10 +77,18 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
         {
             ViewData["NewsNotice"] = "The news service took too long to respond. Please try again later.";
         }
+        SteamStoreInfo? offer = null;
+        string? storeNotice = null;
+        try { offer = await storeTask; }
+        catch (HttpRequestException) { storeNotice = "Steam prices are temporarily unavailable. You can check the store directly."; }
+        catch (TaskCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            storeNotice = "Steam prices took too long to load. You can check the store directly.";
+        }
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var entry = userId is null ? null : await database.LibraryEntries.FirstOrDefaultAsync(item => item.UserId == userId && item.GameId == id);
         var articles = await database.NewsItems.Where(item => item.GameId == id).OrderByDescending(item => item.PublishedAt).Take(12).ToListAsync();
-        return View(new GamePage(game, entry, articles, igdb.IsConfigured));
+        return View(new GamePage(game, entry, articles, igdb.IsConfigured, offer, storeNotice));
     }
 
     [Route("Home/Error")]
