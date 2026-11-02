@@ -6,6 +6,7 @@
     <meta name="description" content="Your games, next discoveries and updates in one place." />
     <title>@ViewData["Title"] · Gamertab</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    @await RenderSectionAsync("Styles", required: false)
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>

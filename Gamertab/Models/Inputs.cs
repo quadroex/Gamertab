@@ -104,6 +104,5 @@ public record CatalogPage(List<Game> Games, string? Query, string? Genre, int Pa
 public record GamePage(Game Game, LibraryEntry? Entry, List<NewsItem> News, bool IgdbConfigured);
 public record LibraryPage(List<LibraryEntry> Entries, string? Status);
 public record LibraryEditPage(Game Game, LibraryInput Input);
-public record CollectionPage(GameCollection Collection, List<Game> AvailableGames);
 public record Recommendation(Game Game, int Score, string Reason);
 public record AccountSettingsPage(string Email, bool HasPassword, bool GoogleLinked, bool GoogleAvailable);

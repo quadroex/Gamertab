@@ -46,6 +46,20 @@ h2 { font-size: 25px; }
 .text-link { font-size: 12px; color: #c8ceda; }
 .filter-bar { display: flex; gap: 12px; padding: 13px; background: #11151c; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 26px; }
 .filter-bar .form-select { max-width: 195px; }
+.collection-picker { margin-bottom: 10px; }
+.collection-picker > .select2 { flex: 1; min-width: 0; }
+.collection-picker > .btn { flex-shrink: 0; }
+.select2-container--default .select2-selection--single { background: var(--panel); border: 1px solid #333b49; border-radius: 6px; height: 42px; }
+.select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text); line-height: 40px; padding-left: 12px; }
+.select2-container--default .select2-selection--single .select2-selection__placeholder { color: var(--muted); }
+.select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px; right: 8px; }
+.select2-container--default.select2-container--open .select2-selection--single { border-color: var(--accent); }
+.select2-dropdown { background: var(--panel); border-color: #333b49; color: var(--text); }
+.select2-container--default .select2-search--dropdown .select2-search__field { background: var(--canvas); border: 1px solid #424c5e; border-radius: 4px; color: var(--text); padding: 8px; outline-color: var(--accent); }
+.select2-container--default .select2-results__option--selected { background: #273226; }
+.select2-container--default .select2-results__option--highlighted.select2-results__option--selectable { background: var(--accent); color: #17200b; }
+.select2-results__option { font-size: 14px; padding: 10px 12px; }
+.select2-results__message { color: var(--muted); }
 .form-control, .form-select { background-color: #11151d; border: 1px solid #303746; color: #eff1f6; padding: 11px 14px; border-radius: 7px; font-size: 14px; }
 .form-control::placeholder { color: #697386; }
 .form-control:focus, .form-select:focus { background-color: #11151d; color: var(--text); border-color: #9dc958; box-shadow: 0 0 0 3px #c6f56812; }
