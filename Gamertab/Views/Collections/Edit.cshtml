@@ -22,4 +22,31 @@
             <a class="btn btn-subtle" asp-action="Index">Cancel</a>
         </div>
     </form>
+    @if (!creating)
+    {
+        <div class="collection-cover-editor">
+            <h2>Collection cover</h2>
+            @if (ViewData["UploadedCoverUrl"] is string uploadedCoverUrl)
+            {
+                <img class="collection-cover-preview" src="@uploadedCoverUrl" alt="Current collection cover" />
+                <p class="form-hint">Your uploaded image takes priority over the image link.</p>
+                <form asp-route="RemoveCollectionCover" asp-route-id="@Context.Request.RouteValues["id"]" asp-route-returnToEdit="true" method="post">
+                    <button class="quiet-button" type="submit">Remove uploaded cover</button>
+                </form>
+            }
+            @if (ViewData["CanUploadCover"] is true)
+            {
+                <form asp-route="UploadCollectionCover" asp-route-id="@Context.Request.RouteValues["id"]" asp-route-returnToEdit="true" method="post" enctype="multipart/form-data">
+                    <label for="collection-cover" class="form-label">Choose an image</label>
+                    <input id="collection-cover" name="cover" type="file" class="form-control" accept="image/png,image/jpeg" required />
+                    <p class="form-hint">PNG or JPEG, up to 2 MB. Uploading replaces the previous image.</p>
+                    <button class="btn btn-subtle" type="submit">Upload cover</button>
+                </form>
+            }
+            else
+            {
+                <p class="form-hint">Image uploads are currently unavailable. You can use an image link above.</p>
+            }
+        </div>
+    }
 </section>

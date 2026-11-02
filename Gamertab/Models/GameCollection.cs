@@ -13,6 +13,8 @@ public class GameCollection
     [MaxLength(1000)]
     public string Description { get; set; } = "";
     public string CoverUrl { get; set; } = "";
+    [MaxLength(200)]
+    public string? CoverBlobName { get; set; }
     public List<CollectionItem> Items { get; set; } = [];
 }
 

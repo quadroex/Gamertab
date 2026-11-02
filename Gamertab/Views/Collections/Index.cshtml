@@ -22,9 +22,10 @@
     @foreach (var collection in Model)
     {
         <article class="collection-card">
-            @if (!string.IsNullOrEmpty(collection.CoverUrl))
+            @if (collection.CoverBlobName is not null || !string.IsNullOrEmpty(collection.CoverUrl))
             {
-                <img src="@collection.CoverUrl" alt="@collection.Name cover" loading="lazy" />
+                var coverUrl = collection.CoverBlobName is not null ? Url.RouteUrl("CollectionCover", new { id = collection.Id }) : collection.CoverUrl;
+                <img src="@coverUrl" alt="@collection.Name cover" loading="lazy" />
             }
             <p class="eyebrow accent">@collection.Items.Count games</p>
             <h2><a asp-action="Details" asp-route-id="@collection.Id">@collection.Name</a></h2>

@@ -17,13 +17,14 @@ services:
       retries: 20
   storage:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
-    command: azurite-queue --queueHost 0.0.0.0 --location /data --silent
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --location /data --silent
     ports:
+      - "127.0.0.1:10000:10000"
       - "127.0.0.1:10001:10001"
     volumes:
       - queues:/data
     healthcheck:
-      test: ["CMD", "node", "-e", "const c=require('net').connect(10001,'127.0.0.1');c.once('connect',()=>{c.end();process.exit(0)});c.once('error',()=>process.exit(1));"]
+      test: ["CMD", "node", "-e", "Promise.all([10000,10001].map(port=>new Promise((resolve,reject)=>{const c=require('net').connect(port,'127.0.0.1');c.once('connect',()=>{c.end();resolve()});c.once('error',reject)}))).then(()=>process.exit(0),()=>process.exit(1));"]
       interval: 3s
       timeout: 3s
       retries: 20

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers;
 
 [Authorize]
-public class CollectionsController(AppDbContext database, GameCatalog catalog) : Controller
+public class CollectionsController(AppDbContext database, GameCatalog catalog, CollectionCoverService covers) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -36,6 +36,7 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog) :
         var collection = await database.Collections.FirstOrDefaultAsync(item => item.Id == id && item.UserId == UserId);
         if (collection is null)
             return NotFound();
+        PrepareCoverForm(collection);
         return View(new CollectionInput { Name = collection.Name, Description = collection.Description, CoverUrl = collection.CoverUrl });
     }
 
@@ -46,7 +47,10 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog) :
         if (collection is null)
             return NotFound();
         if (!ModelState.IsValid)
+        {
+            PrepareCoverForm(collection);
             return View(input);
+        }
         input.ApplyTo(collection);
         await database.SaveChangesAsync();
         return RedirectToAction(nameof(Details), new { id });
@@ -135,8 +139,19 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog) :
         var collection = await database.Collections.FirstOrDefaultAsync(item => item.Id == id && item.UserId == UserId);
         if (collection is null)
             return NotFound();
-        database.Collections.Remove(collection);
-        await database.SaveChangesAsync();
+        try { await covers.DeleteCollectionAsync(collection); }
+        catch (InvalidOperationException exception)
+        {
+            TempData["Message"] = exception.Message;
+            return RedirectToAction(nameof(Details), new { id });
+        }
         return RedirectToAction(nameof(Index));
+    }
+
+    private void PrepareCoverForm(GameCollection collection)
+    {
+        ViewData["CanUploadCover"] = covers.IsConfigured;
+        if (collection.CoverBlobName is not null)
+            ViewData["UploadedCoverUrl"] = Url.RouteUrl("CollectionCover", new { id = collection.Id });
     }
 }

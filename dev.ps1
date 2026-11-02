@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'api-test', 'queue-test', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'api-test', 'queue-test', 'blob-test', 'down', 'status')]
     [string]$Action = 'run'
 )
 
@@ -37,7 +37,7 @@ function Invoke-DevelopmentDocker([string[]]$DockerArguments) {
     if ($LASTEXITCODE -ne 0) { throw 'The Docker command failed.' }
 }
 
-if ($Action -in @('up', 'run', 'api-test', 'queue-test')) {
+if ($Action -in @('up', 'run', 'api-test', 'queue-test', 'blob-test')) {
     New-Item -ItemType Directory -Force -Path $statePath | Out-Null
     $environmentPath = Join-Path $projectRoot '.env'
     if (-not (Test-Path -LiteralPath $environmentPath)) {
@@ -64,7 +64,7 @@ if ($Action -in @('up', 'run', 'api-test', 'queue-test')) {
         }
     }
     $localSecrets['ConnectionStrings:Gamertab'] = "Host=127.0.0.1;Port=15432;Database=gamertab;Username=gamertab;Password=$databasePassword"
-    if ($Action -in @('up', 'run', 'queue-test')) {
+    if ($Action -in @('up', 'run', 'queue-test', 'blob-test')) {
         $localSecrets['ConnectionStrings:QueueStorage'] = 'UseDevelopmentStorage=true'
         $localSecrets['NewsUpdates:Enabled'] = 'true'
     }
@@ -84,7 +84,7 @@ $composeArguments = @('compose', '--project-directory', $dockerProjectRoot, '-f'
 switch ($Action) {
     'up' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db', 'storage'))
-        Write-Output 'The Gamertab database and local queues are ready.'
+        Write-Output 'The Gamertab database and local storage are ready.'
     }
     'run' {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'db', 'storage'))
@@ -96,16 +96,18 @@ switch ($Action) {
         & (Join-Path $projectRoot 'api-tests\run.ps1')
         exit $LASTEXITCODE
     }
-    'queue-test' {
+    { $_ -in @('queue-test', 'blob-test') } {
         Invoke-DevelopmentDocker -DockerArguments ($composeArguments + @('up', '--detach', '--wait', 'storage'))
-        $savedTestConnection = [Environment]::GetEnvironmentVariable('GAMERTAB_QUEUE_TEST_CONNECTION')
+        $connectionVariable = if ($Action -eq 'queue-test') { 'GAMERTAB_QUEUE_TEST_CONNECTION' } else { 'GAMERTAB_BLOB_TEST_CONNECTION' }
+        $testFilter = if ($Action -eq 'queue-test') { 'FullyQualifiedName~NewsQueueTests' } else { 'FullyQualifiedName~CollectionCoverTests|FullyQualifiedName~ApiTests.CollectionsSupportMembershipAndKeepLibraryDataOnDeletion' }
+        $savedTestConnection = [Environment]::GetEnvironmentVariable($connectionVariable)
         try {
-            $env:GAMERTAB_QUEUE_TEST_CONNECTION = 'UseDevelopmentStorage=true'
-            dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --filter 'FullyQualifiedName~NewsQueueTests' --verbosity minimal
+            [Environment]::SetEnvironmentVariable($connectionVariable, 'UseDevelopmentStorage=true')
+            dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --filter $testFilter --verbosity minimal
             $testExitCode = $LASTEXITCODE
         }
         finally {
-            [Environment]::SetEnvironmentVariable('GAMERTAB_QUEUE_TEST_CONNECTION', $savedTestConnection)
+            [Environment]::SetEnvironmentVariable($connectionVariable, $savedTestConnection)
         }
         exit $testExitCode
     }

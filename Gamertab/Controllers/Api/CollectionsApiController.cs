@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Gamertab.Data;
 using Gamertab.Models;
+using Gamertab.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,19 +9,21 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers.Api;
 
 [Authorize, ApiController, Route("api/collections")]
-public class CollectionsApiController(AppDbContext database) : ControllerBase
+public class CollectionsApiController(AppDbContext database, CollectionCoverService covers) : ControllerBase
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
     [HttpGet]
     public async Task<IActionResult> List() => Ok(await database.Collections.Where(collection => collection.UserId == UserId)
-        .Select(collection => new { collection.Id, collection.Name, collection.Description, collection.CoverUrl, count = collection.Items.Count }).ToListAsync());
+        .Select(collection => new { collection.Id, collection.Name, collection.Description, collection.CoverUrl,
+            uploadedCoverUrl = collection.CoverBlobName == null ? null : "/api/collections/" + collection.Id + "/cover", count = collection.Items.Count }).ToListAsync());
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> Details(int id)
     {
         var collection = await database.Collections.Where(collection => collection.Id == id && collection.UserId == UserId)
-            .Select(collection => new { collection.Id, collection.Name, collection.Description, collection.CoverUrl, games = collection.Items.Select(item => new { item.GameId, item.Game.Name }) }).FirstOrDefaultAsync();
+            .Select(collection => new { collection.Id, collection.Name, collection.Description, collection.CoverUrl,
+                uploadedCoverUrl = collection.CoverBlobName == null ? null : "/api/collections/" + collection.Id + "/cover", games = collection.Items.Select(item => new { item.GameId, item.Game.Name }) }).FirstOrDefaultAsync();
         return collection is null ? NotFound() : Ok(collection);
     }
 
@@ -75,8 +78,8 @@ public class CollectionsApiController(AppDbContext database) : ControllerBase
         var collection = await database.Collections.FirstOrDefaultAsync(collection => collection.Id == id && collection.UserId == UserId);
         if (collection is null)
             return NotFound();
-        database.Collections.Remove(collection);
-        await database.SaveChangesAsync();
+        try { await covers.DeleteCollectionAsync(collection); }
+        catch (InvalidOperationException exception) { return Conflict(new { error = exception.Message }); }
         return NoContent();
     }
 }
