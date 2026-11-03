@@ -25,7 +25,7 @@ public class BrowserFactory : PlanFactory
         }));
         builder.ConfigureServices(services =>
         {
-            services.AddHttpClient<GeminiAgent>().ConfigurePrimaryHttpMessageHandler(() => new AssistantBackchannel());
+            services.AddHttpClient<GeminiAgent>().ConfigurePrimaryHttpMessageHandler(() => new AssistantBackchannel { Answer = "### Your library\n\n* **Portal 2** - Puzzle\n* *Cyberpunk 2077* - RPG\n\n[Open Portal 2](/Games/Details/1)" });
             services.AddHttpClient<IgdbClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamNewsClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamStoreClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
@@ -57,6 +57,7 @@ public class BrowserBackchannel : HttpMessageHandler
             else
                 data = new[] { new { id = 1001, name = "Browser Quest", summary = "A game discovered outside the starter catalogue.",
                     genres = new[] { new { name = "Puzzle" }, new { name = "Adventure" } },
+                    themes = new[] { new { name = "Science fiction" } },
                     platforms = new[] { new { name = "PC (Microsoft Windows)" } }, cover = new { image_id = "cover1" } } };
         }
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(data) };
@@ -152,14 +153,40 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         await page.GetByLabel("Message", new() { Exact = true }).FillAsync("Read my library");
         await page.GetByRole(AriaRole.Button, new() { Name = "Send", Exact = true }).ClickAsync();
         await Expect(page.Locator("[data-status]")).ToHaveTextAsync("Done");
-        await Expect(page.Locator(".assistant-text").Last).ToHaveTextAsync("Your library is ready.");
+        await Expect(page.Locator(".assistant-text h3")).ToHaveTextAsync("Your library");
+        await Expect(page.Locator(".assistant-text li")).ToHaveCountAsync(2);
+        await Expect(page.Locator(".assistant-text li strong")).ToHaveTextAsync("Portal 2");
+        await Expect(page.Locator(".assistant-text li em")).ToHaveTextAsync("Cyberpunk 2077");
+        await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Open Portal 2" })).ToHaveAttributeAsync("href", "/Games/Details/1");
+        Assert.DoesNotContain("*", await page.Locator(".assistant-text").Last.InnerTextAsync());
         await Expect(page.Locator(".assistant-message details")).ToHaveCountAsync(1);
         await Expect(page.Locator("[data-messages] script")).ToHaveCountAsync(0);
         await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "assistant.png"), FullPage = true });
+        await page.EvaluateAsync("formatChat(document.querySelector('.assistant-text'), '<img src=x onerror=alert(1)>\\n\\n```html\\n<script>alert(1)</script>\\n```\\n\\n[Unsafe](javascript:alert(1))')");
+        await Expect(page.Locator(".assistant-text").First.Locator("img, script, a")).ToHaveCountAsync(0);
+        await Expect(page.Locator(".assistant-text pre code")).ToContainTextAsync("<script>");
         await page.SetViewportSizeAsync(390, 844);
         await page.WaitForFunctionAsync("document.documentElement.scrollWidth <= window.innerWidth");
         await page.GetByRole(AriaRole.Button, new() { Name = "New conversation", Exact = true }).ClickAsync();
         await Expect(page.Locator(".assistant-message")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task BrowseShowsSearchAndPopularGamesWhilePersonalPicksStayOnForYou()
+    {
+        await using var context = await fixture.NewContextAsync();
+        var page = await context.NewPageAsync();
+        await RegisterAsync(page);
+        await OpenRemoteGameAsync(page);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add to my library +", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Link, new() { Name = "Browse", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Popular games", Exact = true })).ToBeVisibleAsync();
+        await Expect(page.GetByLabel("Search catalogue")).ToBeVisibleAsync();
+        await Expect(page.Locator(".hero, .recommendations-section")).ToHaveCountAsync(0);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "browse.png"), FullPage = true });
+        await page.GetByRole(AriaRole.Link, new() { Name = "For you", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Heading, new() { Name = "Your next favourite?" })).ToBeVisibleAsync();
+        await Expect(page.GetByText("Picked for you", new() { Exact = true }).First).ToBeVisibleAsync();
     }
 
     private static async Task OpenRemoteGameAsync(IPage page)

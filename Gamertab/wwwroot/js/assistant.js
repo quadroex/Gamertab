@@ -39,6 +39,7 @@ if (assistant) {
         input.value = '';
         status.textContent = 'Connecting…';
         let complete = false;
+        let answerText = '';
         try {
             const response = await fetch('/api/assistant/chat', {
                 method: 'POST', signal: controller.signal,
@@ -58,7 +59,8 @@ if (assistant) {
                     buffer = buffer.slice(end + 2);
                     const type = lines.find(line => line.startsWith('event:'))?.slice(6).trim();
                     const data = JSON.parse(lines.filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n'));
-                    if (type === 'delta') { answer.textContent += data.text; status.textContent = 'Responding…'; }
+                    if (type === 'delta') { answerText += data.text; formatChat(answer, answerText); status.textContent = 'Responding…'; }
+                    if (type === 'status') status.textContent = data.message;
                     if (type === 'tool_start') { status.textContent = (toolLabels[data.name] ?? 'Using a tool') + '…'; }
                     if (type === 'tool_result') {
                         const detail = document.createElement('details');
@@ -88,21 +90,9 @@ if (assistant) {
                 if (done) break;
             }
             if (!complete) throw new Error('The response was interrupted. Please try again.');
-            history.push({ role: 'user', text: message }, { role: 'model', text: answer.textContent.slice(0, 8000) });
+            history.push({ role: 'user', text: message }, { role: 'model', text: answerText.slice(0, 8000) });
             history = history.slice(-10);
-            const text = answer.textContent;
-            const links = /\[([^\]\n]+)\]\((\/Games\/Details\/[1-9]\d*)\)|\*\*([^*\n]+)\*\*/g;
-            let position = 0;
-            answer.replaceChildren();
-            for (const match of text.matchAll(links)) {
-                answer.append(document.createTextNode(text.slice(position, match.index)));
-                const link = document.createElement(match[3] ? 'strong' : 'a');
-                link.textContent = match[3] ?? match[1];
-                if (match[2]) link.href = match[2];
-                answer.append(link);
-                position = match.index + match[0].length;
-            }
-            answer.append(document.createTextNode(text.slice(position)));
+            formatChat(answer, answerText);
             status.textContent = 'Done';
         } catch (error) {
             status.textContent = error.name === 'AbortError' ? 'Stopped' : error.message;

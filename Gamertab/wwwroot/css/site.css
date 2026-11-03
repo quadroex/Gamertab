@@ -220,6 +220,11 @@ h2 { font-size: 25px; }
 .assistant-messages { display: grid; gap: 16px; margin: 24px 0; }
 .assistant-message { min-width: 0; }
 .assistant-text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 12px; }
+.assistant-text p, .assistant-text ul, .assistant-text ol { margin: 0 0 12px; white-space: normal; }
+.assistant-text h3 { font-size: 18px; margin: 18px 0 10px; }
+.assistant-text li { margin: 6px 0; }
+.assistant-text pre { white-space: pre-wrap; }
+.assistant-text > :last-child { margin-bottom: 0; }
 .assistant-message details { color: var(--muted); margin-top: 12px; }
 .assistant-message pre { max-height: 240px; overflow: auto; font-size: 12px; }
 .assistant textarea { margin-top: 8px; }

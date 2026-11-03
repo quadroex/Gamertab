@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Controllers;
 
-public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsClient news, GameCatalog catalog, RecommendationService recommendations, SteamStoreClient store) : Controller
+public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsClient news, GameCatalog catalog, SteamStoreClient store) : Controller
 {
     public async Task<IActionResult> Index(string? q, string? genre, int page = 1, bool saved = false)
     {
@@ -21,9 +21,6 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
         if (!string.IsNullOrEmpty(q) && result.IsLive && result.Games.Count > 0 &&
             !result.Games.Any(game => game.Name.Equals(q, StringComparison.OrdinalIgnoreCase)))
             result = result with { Notice = "No exact title match on this page. Other search results are shown below." };
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId is not null && !saved && string.IsNullOrEmpty(q) && string.IsNullOrEmpty(genre) && page == 1)
-            result = result with { Recommendations = await recommendations.GetAsync(userId, HttpContext.RequestAborted) };
         return View(result);
     }
 

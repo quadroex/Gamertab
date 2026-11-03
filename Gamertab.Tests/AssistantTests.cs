@@ -14,14 +14,16 @@ public class AssistantBackchannel : HttpMessageHandler
 {
     public List<string> Requests { get; } = [];
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
+    public Queue<HttpStatusCode> Statuses { get; } = new();
+    public string Answer { get; set; } = "Your library is ready.";
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = await request.Content!.ReadAsStringAsync(cancellationToken);
         Requests.Add(body);
         var result = body.Contains("functionResponse")
-            ? "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"Your library is ready.\"}]}}]}"
+            ? JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = Answer } } } } } })
             : "{\"candidates\":[{\"content\":{\"parts\":[{\"functionCall\":{\"name\":\"get_library\",\"args\":{}}}]}}]}";
-        return new HttpResponseMessage(Status) { Content = new StringContent("data: " + result + "\n\n", Encoding.UTF8, "text/event-stream") };
+        return new HttpResponseMessage(Statuses.Count > 0 ? Statuses.Dequeue() : Status) { Content = new StringContent("data: " + result + "\n\n", Encoding.UTF8, "text/event-stream") };
     }
 }
 
@@ -90,6 +92,22 @@ public class AssistantTests
     }
 
     [Fact]
+    public async Task TemporaryProviderFailureRetriesOnceAndPreservesUkrainianInput()
+    {
+        using var factory = new AssistantFactory();
+        factory.Backchannel.Statuses.Enqueue(HttpStatusCode.ServiceUnavailable);
+        using var client = await RegisterAsync(factory);
+        const string question = "Покажи мою бібліотеку";
+        var response = await client.PostAsJsonAsync("/api/assistant/chat", new { message = question });
+        var stream = await response.Content.ReadAsStringAsync();
+        Assert.Contains("event: status", stream);
+        Assert.Contains("event: done", stream);
+        Assert.Equal(3, factory.Backchannel.Requests.Count);
+        using var request = JsonDocument.Parse(factory.Backchannel.Requests[0]);
+        Assert.Equal(question, request.RootElement.GetProperty("contents")[0].GetProperty("parts")[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
     public async Task ExhaustedGeminiQuotaIsReportedAsAnErrorEvent()
     {
         using var factory = new AssistantFactory();
@@ -100,5 +118,6 @@ public class AssistantTests
         Assert.Contains("event: error", body);
         Assert.Contains("quota", body);
         Assert.DoesNotContain("event: done", body);
+        Assert.Single(factory.Backchannel.Requests);
     }
 }
