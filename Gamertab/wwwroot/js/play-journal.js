@@ -7,9 +7,10 @@ if (journal) {
     const preview = journal.querySelector('[data-preview]');
     const rendered = journal.querySelector('[data-rendered]');
     const source = journal.querySelector('[data-markdown]');
+    const remoteNotice = journal.querySelector('[data-remote-notice]');
     const key = journal.dataset.storageKey;
     const types = ['paragraph', 'heading', 'list'];
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let blocks = [{ id: crypto.randomUUID(), type: 'paragraph', text: '' }];
     const clientId = crypto.randomUUID();
     const draftKey = key + ':draft';
@@ -25,23 +26,35 @@ if (journal) {
     let draggedId = null;
     let storageReady = true;
     let storageFailed = false;
+    let legacyIds = false;
+    let receivedSnapshot = false;
+    let refreshing = false;
+    let refreshQueued = false;
+    const highlights = new WeakMap();
+    const movements = new WeakMap();
 
     const showError = message => {
         error.textContent = message;
         error.hidden = false;
     };
-    const documentBlocks = () => blocks.map(({ type, text }) => ({ type, text }));
-    const sameBlocks = other => JSON.stringify(documentBlocks()) === JSON.stringify(other);
+    const documentBlocks = () => blocks.map(({ id, type, text }) => ({ id, type, text }));
+    const sameBlocks = other => blocks.length === other.length && blocks.every((block, index) =>
+        block.type === other[index].type && block.text === other[index].text && (legacyIds || block.id === other[index].id));
+    const validId = id => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) &&
+        id !== '00000000-0000-0000-0000-000000000000';
     try {
         const saved = sessionStorage.getItem(draftKey) ?? localStorage.getItem(key);
         if (saved !== null) {
             const savedDocument = JSON.parse(saved);
-            if (![1, 2].includes(savedDocument.version) || !Array.isArray(savedDocument.blocks) || savedDocument.blocks.length > 100 ||
+            if (![1, 2, 3].includes(savedDocument.version) || !Array.isArray(savedDocument.blocks) || savedDocument.blocks.length > 100 ||
                 !savedDocument.blocks.every(block => types.includes(block.type) && typeof block.text === 'string' && block.text.length <= 10000) ||
-                (savedDocument.version === 2 && (!Number.isInteger(savedDocument.revision) || savedDocument.revision < 0 || typeof savedDocument.pending !== 'boolean'))) {
+                (savedDocument.version >= 2 && (!Number.isInteger(savedDocument.revision) || savedDocument.revision < 0 || typeof savedDocument.pending !== 'boolean')) ||
+                (savedDocument.version === 3 && (!savedDocument.blocks.every(block => validId(block.id)) ||
+                    new Set(savedDocument.blocks.map(block => block.id.toLowerCase())).size !== savedDocument.blocks.length))) {
                 throw new Error('Invalid journal');
             }
-            blocks = savedDocument.blocks.map(block => ({ id: crypto.randomUUID(), type: block.type, text: block.text }));
+            legacyIds = savedDocument.version < 3 || savedDocument.legacyIds === true;
+            blocks = savedDocument.blocks.map(block => ({ id: savedDocument.version === 3 ? block.id.toLowerCase() : crypto.randomUUID(), type: block.type, text: block.text }));
             revision = savedDocument.revision ?? 0;
             pending = savedDocument.version === 1 || savedDocument.pending;
         }
@@ -78,7 +91,7 @@ if (journal) {
 
     const saveLocal = () => {
         if (!storageReady) return;
-        const saved = JSON.stringify({ version: 2, revision, pending, blocks: documentBlocks() });
+        const saved = JSON.stringify({ version: 3, revision, pending, legacyIds, blocks: documentBlocks() });
         try {
             sessionStorage.setItem(draftKey, saved);
             localStorage.setItem(key, saved);
@@ -94,22 +107,73 @@ if (journal) {
         status.textContent = 'Conflicting changes — choose a copy';
         saveLocal();
     };
-    const accept = snapshot => {
+    const positions = () => {
+        [...board.children].forEach(card => movements.get(card)?.cancel());
+        return new Map([...board.children].map(card => [card.dataset.blockId, card.getBoundingClientRect()]));
+    };
+    const animatePositions = before => {
+        if (reducedMotion.matches) return;
+        [...board.children].forEach(card => {
+            const previous = before.get(card.dataset.blockId);
+            const current = card.getBoundingClientRect();
+            if (previous && (previous.top !== current.top || previous.left !== current.left)) {
+                movements.set(card, card.animate([
+                    { transform: `translate(${previous.left - current.left}px, ${previous.top - current.top}px)` },
+                    { transform: 'translate(0, 0)' }
+                ], { duration: 280, easing: 'ease-out' }));
+            }
+        });
+    };
+    const showRemoteChanges = (previous, before) => {
+        const changes = { added: 0, edited: 0, moved: 0, removed: 0 };
+        const currentIds = new Set(blocks.map(block => block.id));
+        const oldOrder = [...previous.keys()].filter(id => currentIds.has(id));
+        const newOrder = blocks.filter(block => previous.has(block.id)).map(block => block.id);
+        blocks.forEach(block => {
+            const old = previous.get(block.id);
+            const kinds = [];
+            if (!old) kinds.push('added');
+            else {
+                if (old.type !== block.type || old.text !== block.text) kinds.push('edited');
+                if (oldOrder.indexOf(block.id) !== newOrder.indexOf(block.id)) kinds.push('moved');
+            }
+            kinds.forEach(kind => changes[kind]++);
+            if (!kinds.length) return;
+            const card = [...board.children].find(item => item.dataset.blockId === block.id);
+            clearTimeout(highlights.get(card));
+            card.dataset.remoteChange = kinds.join(' ');
+            highlights.set(card, setTimeout(() => delete card.dataset.remoteChange, 2400));
+        });
+        changes.removed = [...previous.keys()].filter(id => !blocks.some(block => block.id === id)).length;
+        const summary = Object.entries(changes).filter(([, count]) => count).map(([kind, count]) => `${count} ${count === 1 ? 'block' : 'blocks'} ${kind}`);
+        if (summary.length) {
+            remoteNotice.textContent = 'Another device: ' + summary.join(', ');
+            remoteNotice.hidden = false;
+            animatePositions(before);
+        }
+    };
+    const accept = (snapshot, visualize = false) => {
+        const previous = new Map(blocks.map((block, index) => [block.id, { ...block, index }]));
+        const existing = new Map(blocks.map(block => [block.id, block]));
+        const before = visualize ? positions() : null;
         revision = snapshot.revision;
-        blocks = snapshot.blocks.map(block => ({ id: crypto.randomUUID(), ...block }));
+        blocks = snapshot.blocks.map(block => Object.assign(existing.get(block.id) ?? {}, block));
+        legacyIds = false;
         pending = false;
         conflict = null;
         journal.querySelector('[data-conflict]').hidden = true;
         render();
+        if (visualize) showRemoteChanges(previous, before);
         saveLocal();
         if (storageReady && !storageFailed) error.hidden = true;
         status.textContent = 'Synced to your account';
     };
     const refresh = async () => {
-        if (syncing) {
-            setTimeout(refresh, 400);
+        if (syncing || refreshing || draggedId !== null) {
+            refreshQueued = true;
             return;
         }
+        refreshing = true;
         try {
             const response = await fetch(endpoint, { cache: 'no-store' });
             if (!response.ok) throw new Error();
@@ -122,12 +186,20 @@ if (journal) {
             }
             ready = true;
             if (snapshot.revision < revision) return;
-            if (!pending || sameBlocks(snapshot.blocks)) accept(snapshot);
+            const visualize = receivedSnapshot && snapshot.revision > revision;
+            receivedSnapshot = true;
+            if (!pending || sameBlocks(snapshot.blocks)) accept(snapshot, visualize);
             else if (snapshot.revision !== revision) showConflict(snapshot);
             else await save();
         } catch {
             ready = false;
             status.textContent = 'Offline — local draft kept';
+        } finally {
+            refreshing = false;
+            if (refreshQueued) {
+                refreshQueued = false;
+                setTimeout(refresh, 0);
+            }
         }
     };
     const save = async () => {
@@ -151,6 +223,7 @@ if (journal) {
             } else {
                 const snapshot = await response.json();
                 revision = snapshot.revision;
+                legacyIds = false;
                 pending = sentEdits !== edits;
                 saveLocal();
                 if (storageReady && !storageFailed) error.hidden = true;
@@ -161,6 +234,10 @@ if (journal) {
             status.textContent = 'Offline — local draft kept';
         } finally {
             syncing = false;
+            if (refreshQueued && !refreshing) {
+                refreshQueued = false;
+                refresh();
+            }
         }
         if (pending && ready && !conflict) timer = setTimeout(save, 300);
     };
@@ -175,56 +252,73 @@ if (journal) {
     };
 
     const render = () => {
-        board.replaceChildren();
+        const cards = new Map([...board.children].map(card => [card.dataset.blockId, card]));
+        const focused = document.activeElement;
+        const hadFocus = board.contains(focused);
+        const selection = focused instanceof HTMLTextAreaElement ? [focused.selectionStart, focused.selectionEnd, focused.selectionDirection] : null;
+        const focusedIndex = hadFocus ? [...board.children].indexOf(focused.closest('.journal-block')) : -1;
         blocks.forEach((block, index) => {
-            const card = template.content.firstElementChild.cloneNode(true);
+            let card = cards.get(block.id);
+            if (!card) {
+                card = template.content.firstElementChild.cloneNode(true);
+                const input = card.querySelector('textarea');
+                const select = card.querySelector('select');
+                input.addEventListener('input', () => {
+                    block.text = input.value;
+                    changed();
+                });
+                select.addEventListener('change', () => {
+                    block.type = select.value;
+                    render();
+                    changed();
+                });
+                card.querySelector('[data-remove]').addEventListener('click', () => {
+                    blocks.splice(blocks.findIndex(item => item.id === block.id), 1);
+                    render();
+                    changed();
+                });
+                card.querySelector('[data-up]').addEventListener('click', () => {
+                    const from = blocks.findIndex(item => item.id === block.id);
+                    move(from, from - 1);
+                });
+                card.querySelector('[data-down]').addEventListener('click', () => {
+                    const from = blocks.findIndex(item => item.id === block.id);
+                    move(from, from + 1);
+                });
+            }
             card.dataset.blockId = block.id;
             card.dataset.blockType = block.type;
             const input = card.querySelector('textarea');
             const select = card.querySelector('select');
-            input.value = block.text;
+            if (input.value !== block.text) input.value = block.text;
             input.placeholder = block.type === 'heading' ? 'Heading' : block.type === 'list' ? 'One item per line' : 'What happened in your last session?';
             input.rows = block.type === 'heading' ? 1 : Math.max(3, Math.min(10, block.text.split('\n').length));
             select.value = block.type;
             card.querySelector('[data-up]').disabled = index === 0;
             card.querySelector('[data-down]').disabled = index === blocks.length - 1;
-            input.addEventListener('input', () => {
-                block.text = input.value;
-                changed();
-            });
-            select.addEventListener('change', () => {
-                block.type = select.value;
-                render();
-                changed();
-            });
-            card.querySelector('[data-remove]').addEventListener('click', () => {
-                blocks.splice(blocks.findIndex(item => item.id === block.id), 1);
-                render();
-                changed();
-            });
-            card.querySelector('[data-up]').addEventListener('click', () => move(index, index - 1));
-            card.querySelector('[data-down]').addEventListener('click', () => move(index, index + 1));
-            board.append(card);
+            if (board.children[index] !== card) board.insertBefore(card, board.children[index] ?? null);
         });
+        const ids = new Set(blocks.map(block => block.id));
+        cards.forEach((card, id) => { if (!ids.has(id)) card.remove(); });
+        if (hadFocus) {
+            if (focused.isConnected) {
+                if (document.activeElement !== focused) focused.focus({ preventScroll: true });
+                if (selection) focused.setSelectionRange(selection[0], selection[1], selection[2]);
+            } else {
+                board.children[Math.min(focusedIndex, blocks.length - 1)]?.querySelector('textarea').focus({ preventScroll: true });
+            }
+        }
         journal.querySelectorAll('[data-add]').forEach(button => button.disabled = blocks.length >= 100);
         updatePreview();
     };
 
     const move = (from, to) => {
         if (from === to || from < 0 || to < 0 || to >= blocks.length) return;
-        const positions = new Map([...board.children].map(card => [card.dataset.blockId, card.getBoundingClientRect()]));
+        const before = positions();
         const [block] = blocks.splice(from, 1);
         blocks.splice(to, 0, block);
         render();
-        if (!reducedMotion) {
-            [...board.children].forEach(card => {
-                const before = positions.get(card.dataset.blockId);
-                const after = card.getBoundingClientRect();
-                if (before && before.top !== after.top) {
-                    card.animate([{ transform: `translateY(${before.top - after.top}px)` }, { transform: 'translateY(0)' }], { duration: 180, easing: 'ease-out' });
-                }
-            });
-        }
+        animatePositions(before);
         board.children[to].querySelector('textarea').focus({ preventScroll: true });
         changed();
     };
@@ -252,6 +346,10 @@ if (journal) {
     const clearDrag = () => {
         draggedId = null;
         board.querySelectorAll('.dragging, .drop-before, .drop-after').forEach(card => card.classList.remove('dragging', 'drop-before', 'drop-after'));
+        if (refreshQueued && !refreshing && !syncing) {
+            refreshQueued = false;
+            refresh();
+        }
     };
     board.addEventListener('dragstart', event => {
         if (!event.target.closest('.journal-drag')) return;
@@ -283,9 +381,9 @@ if (journal) {
     });
     document.addEventListener('dragend', clearDrag);
     window.addEventListener('pagehide', saveLocal);
-    document.addEventListener('visibilitychange', () => { if (document.hidden) saveLocal(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveLocal(); else refresh(); });
     journal.querySelector('[data-use-server]').addEventListener('click', () => {
-        if (conflict) accept(conflict);
+        if (conflict) accept(conflict, true);
     });
     journal.querySelector('[data-keep-local]').addEventListener('click', () => {
         if (!conflict) return;
@@ -295,6 +393,9 @@ if (journal) {
         save();
     });
     const connection = new signalR.HubConnectionBuilder().withUrl('/hubs/journal').withAutomaticReconnect().build();
+    reducedMotion.addEventListener('change', () => {
+        if (reducedMotion.matches) [...board.children].forEach(card => movements.get(card)?.cancel());
+    });
     const subscribe = async () => {
         await connection.invoke('Subscribe', Number(journal.dataset.gameId));
         await refresh();
@@ -302,7 +403,7 @@ if (journal) {
     connection.on('JournalChanged', (remoteRevision, writer) => {
         if (writer !== clientId && remoteRevision > revision) refresh();
     });
-    connection.onreconnected(subscribe);
+    connection.onreconnected(() => subscribe().catch(() => setTimeout(connect, 1000)));
     connection.onreconnecting(() => { status.textContent = 'Reconnecting — local draft kept'; });
     const connect = async () => {
         try {

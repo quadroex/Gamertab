@@ -457,6 +457,62 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
     }
 
     [Fact]
+    public async Task RemoteJournalChangesAnimateAndHighlightWhilePreservingFocus()
+    {
+        await using var first = await fixture.NewContextAsync();
+        var page = await first.NewPageAsync();
+        var email = await RegisterAsync(page);
+        await OpenRemoteGameAsync(page);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add to my library +", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Link, new() { Name = "Open play journal", Exact = false }).ClickAsync();
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        await page.GetByLabel("Block text", new() { Exact = true }).FillAsync("Same session note");
+        await page.GetByRole(AriaRole.Button, new() { Name = "+ Text", Exact = true }).ClickAsync();
+        await page.GetByLabel("Block text", new() { Exact = true }).Last.FillAsync("Same session note");
+        await Expect(page.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        var firstId = await page.Locator(".journal-block").First.GetAttributeAsync("data-block-id");
+
+        await using var second = await fixture.NewContextAsync();
+        var remote = await second.NewPageAsync();
+        await remote.GotoAsync("/Account/Login");
+        await remote.GetByLabel("Email", new() { Exact = true }).FillAsync(email);
+        await remote.GetByLabel("Password", new() { Exact = true }).FillAsync(Password);
+        await remote.GetByRole(AriaRole.Button, new() { Name = "Sign in", Exact = true }).ClickAsync();
+        await remote.GotoAsync(page.Url);
+        await Expect(remote.Locator(".journal-block")).ToHaveCountAsync(2);
+        await Expect(remote.Locator("[data-save-status]")).ToHaveTextAsync("Synced to your account");
+        await remote.EmulateMediaAsync(new() { ReducedMotion = ReducedMotion.NoPreference });
+        var normalBorder = await remote.Locator(".journal-block").First.EvaluateAsync<string>("card => getComputedStyle(card).borderColor");
+        await remote.GetByLabel("Block text", new() { Exact = true }).Last.FocusAsync();
+        await remote.GetByLabel("Block text", new() { Exact = true }).Last.EvaluateAsync("input => input.setSelectionRange(3, 3)");
+        var movement = remote.WaitForFunctionAsync("id => [...document.querySelectorAll('.journal-block')].find(card => card.dataset.blockId === id)?.getAnimations().some(animation => animation.playState === 'running')", firstId);
+        await page.GetByRole(AriaRole.Button, new() { Name = "Move block down", Exact = true }).First.ClickAsync();
+        await movement;
+        await Expect(remote.Locator(".journal-block").Last).ToHaveAttributeAsync("data-block-id", firstId!);
+        await Expect(remote.Locator(".journal-block").Last).ToHaveAttributeAsync("data-remote-change", new Regex("moved"));
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true }).First).ToBeFocusedAsync();
+        Assert.Equal(3, await remote.GetByLabel("Block text", new() { Exact = true }).First.EvaluateAsync<int>("input => input.selectionStart"));
+        Assert.NotEqual(normalBorder, await remote.Locator(".journal-block").Last.EvaluateAsync<string>("card => getComputedStyle(card).borderColor"));
+
+        await page.GetByLabel("Block text", new() { Exact = true }).Last.FillAsync("Updated from the other browser");
+        await Expect(remote.GetByLabel("Block text", new() { Exact = true }).Last).ToHaveValueAsync("Updated from the other browser");
+        await Expect(remote.Locator(".journal-block").Last).ToHaveAttributeAsync("data-remote-change", new Regex("edited"));
+        await remote.ScreenshotAsync(new() { Path = Path.Combine(fixture.ResultsPath, "journal-remote-actions.png"), FullPage = true });
+        await page.GetByRole(AriaRole.Button, new() { Name = "Remove block", Exact = true }).Last.ClickAsync();
+        await Expect(remote.Locator(".journal-block")).ToHaveCountAsync(1);
+        await Expect(remote.Locator("[data-remote-notice]")).ToContainTextAsync("removed");
+        await page.GetByRole(AriaRole.Button, new() { Name = "+ Heading", Exact = true }).ClickAsync();
+        await Expect(remote.Locator(".journal-block")).ToHaveCountAsync(2);
+        await Expect(remote.Locator(".journal-block").Last).ToHaveAttributeAsync("data-remote-change", new Regex("added"));
+        var headingId = await remote.Locator(".journal-block").Last.GetAttributeAsync("data-block-id");
+        await remote.EmulateMediaAsync(new() { ReducedMotion = ReducedMotion.Reduce });
+        await page.GetByRole(AriaRole.Button, new() { Name = "Move block up", Exact = true }).Last.ClickAsync();
+        await Expect(remote.Locator(".journal-block").First).ToHaveAttributeAsync("data-block-id", headingId!);
+        await Expect(remote.Locator(".journal-block").First).ToHaveAttributeAsync("data-remote-change", new Regex("moved"));
+        Assert.Equal(0, await remote.Locator(".journal-block").First.EvaluateAsync<int>("card => card.getAnimations().length"));
+    }
+
+    [Fact]
     public async Task JournalBlocksCanBeDraggedExportedAndRestoredAfterBrowserRestart()
     {
         var root = Path.GetFullPath(fixture.ResultsPath) + Path.DirectorySeparatorChar;

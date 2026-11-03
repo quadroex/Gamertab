@@ -13,7 +13,7 @@ public class PlayJournal
     public string BlocksJson { get; set; } = "[]";
 }
 
-public record JournalBlock(string Type, string Text);
+public record JournalBlock(string Type, string Text, Guid? Id = null);
 public record JournalSnapshot(int Revision, IReadOnlyList<JournalBlock> Blocks, string OwnerId);
 public class JournalInput : IValidatableObject
 {
@@ -27,5 +27,10 @@ public class JournalInput : IValidatableObject
     {
         if (Blocks is not null && Blocks.Any(block => block is null || block.Type is not ("paragraph" or "heading" or "list") || block.Text is null || block.Text.Length > 10000))
             yield return new ValidationResult("Invalid journal blocks.", [nameof(Blocks)]);
+        if (Blocks is not null && (Blocks.Any(block => block?.Id == Guid.Empty) ||
+            Blocks.Where(block => block?.Id is not null).GroupBy(block => block.Id).Any(group => group.Count() > 1)))
+            yield return new ValidationResult("Journal block IDs must be unique and nonempty.", [nameof(Blocks)]);
+        if (Blocks is not null && Blocks.Any(block => block?.Id is null) && Blocks.Any(block => block?.Id is not null))
+            yield return new ValidationResult("Include IDs for all blocks or none.", [nameof(Blocks)]);
     }
 }
