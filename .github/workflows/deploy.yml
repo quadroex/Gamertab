@@ -55,15 +55,28 @@ jobs:
         run: gcloud auth configure-docker "$REGISTRY" --quiet
       - name: Build and push image
         run: |
+          EXPORT_IMAGE="$REGISTRY/$PROJECT_ID/gamertab/library-export:$GITHUB_SHA"
+          docker build --tag "$EXPORT_IMAGE" functions/LibraryExport
+          docker push "$EXPORT_IMAGE"
+          echo "EXPORT_IMAGE=$EXPORT_IMAGE" >> "$GITHUB_ENV"
           IMAGE="$REGISTRY/$PROJECT_ID/gamertab/web:$GITHUB_SHA"
           docker build --tag "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy library export function
+        run: |
+          gcloud run deploy gamertab-export --project "$PROJECT_ID" --region "$REGION" \
+            --image "$EXPORT_IMAGE" --service-account "gamertab-export@$PROJECT_ID.iam.gserviceaccount.com" \
+            --port 8080 --cpu 1 --memory 256Mi --concurrency 10 \
+            --min 0 --max 1 --timeout 30 --cpu-throttling \
+            --labels "commit=$GITHUB_SHA" --quiet
+          EXPORT_URL=$(gcloud run services describe gamertab-export --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')
+          echo "EXPORT_URL=$EXPORT_URL" >> "$GITHUB_ENV"
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
             --image "$IMAGE" --service-account "$RUNTIME_ACCOUNT" \
-            --update-env-vars "BlobStorage__GoogleBucket=$COVER_BUCKET" \
+            --update-env-vars "BlobStorage__GoogleBucket=$COVER_BUCKET,LibraryExport__Url=$EXPORT_URL" \
             --port 8080 --cpu 1 --memory 512Mi --concurrency 20 \
             --min 0 --max 1 --timeout 300 --cpu-throttling \
             --labels "commit=$GITHUB_SHA" --quiet

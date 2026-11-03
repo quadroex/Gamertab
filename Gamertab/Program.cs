@@ -79,6 +79,7 @@ builder.Services.AddScoped<PlanAccess>();
 builder.Services.AddScoped<JournalStore>();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient<GeminiAgent>(client => client.Timeout = TimeSpan.FromSeconds(90));
+builder.Services.AddHttpClient<LibraryExportClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;

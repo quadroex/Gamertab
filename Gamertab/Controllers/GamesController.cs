@@ -11,6 +11,11 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
 {
     public async Task<IActionResult> Index(string? q, string? genre, int page = 1, bool saved = false)
     {
+        if (Request.Query.Count == 0)
+        {
+            ViewData["CanonicalPath"] = "/";
+            ViewData["Description"] = "Discover popular games across PC and consoles. Explore ratings, platforms, trailers and news, then build your own library with Gamertab.";
+        }
         q = q?.Trim();
         if (page < 1 || page > 10000 || q?.Length > 100 ||
             (!string.IsNullOrEmpty(genre) && !CatalogPage.Genres.ContainsKey(genre)))
@@ -49,6 +54,11 @@ public class GamesController(AppDbContext database, IgdbClient igdb, SteamNewsCl
         var game = await database.Games.FindAsync(id);
         if (game is null)
             return NotFound();
+        ViewData["CanonicalPath"] = $"/Games/Details/{id}";
+        var summary = System.Text.RegularExpressions.Regex.Replace(game.Summary, @"\s+", " ").Trim();
+        ViewData["Description"] = $"Explore {game.Name}: platforms, ratings, playtime and news. " + (summary.Length > 110 ? summary[..107] + "..." : summary);
+        ViewData["ShareImage"] = game.CoverUrl;
+        ViewData["AnalyticsGameId"] = id;
         if (game.IgdbId.HasValue && game.DataSource != "IGDB")
         {
             try

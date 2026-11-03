@@ -3,7 +3,7 @@
     var action = Model.Game.Id > 0 ? "Details" : "Open";
     var id = Model.Game.Id > 0 ? Model.Game.Id : Model.Game.IgdbId;
 }
-<article class="game-card">
+<article class="game-card" data-recommendation-game="@id">
     <a class="game-art" asp-controller="Games" asp-action="@action" asp-route-id="@id">
         @if (!string.IsNullOrEmpty(Model.Game.CoverUrl))
         {

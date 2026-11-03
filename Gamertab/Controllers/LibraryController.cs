@@ -9,9 +9,29 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers;
 
 [Authorize]
-public class LibraryController(AppDbContext database, RecommendationService recommendations, PlanAccess plans) : Controller
+public class LibraryController(AppDbContext database, RecommendationService recommendations, PlanAccess plans, LibraryExportClient export, ILogger<LibraryController> logger) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    [HttpPost]
+    public async Task<IActionResult> Export()
+    {
+        Response.Headers.CacheControl = "no-store";
+        var games = await database.LibraryEntries.AsNoTracking().Where(entry => entry.UserId == UserId)
+            .Select(entry => new { entry.GameId, entry.Game.Name, entry.Status, entry.PersonalRating, entry.StartedOn, entry.CompletedOn }).ToListAsync();
+        var input = games.Select(game => new Gamertab.LibraryExport.ExportGame(game.GameId, game.Name, game.Status.ToString(), game.PersonalRating, game.StartedOn, game.CompletedOn)).ToList();
+        try
+        {
+            var markdown = await export.ExportAsync(input, HttpContext.RequestAborted);
+            return File(System.Text.Encoding.UTF8.GetBytes(markdown), "text/markdown; charset=utf-8", "gamertab-library.md");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogWarning("Library export service is unavailable.");
+            TempData["Message"] = "Library export is temporarily unavailable. Please try again later.";
+            return RedirectToAction(nameof(Index));
+        }
+    }
 
     public async Task<IActionResult> Index(string? status)
     {
@@ -61,6 +81,7 @@ public class LibraryController(AppDbContext database, RecommendationService reco
             entry = new LibraryEntry { UserId = UserId, GameId = gameId };
             database.LibraryEntries.Add(entry);
             await database.SaveChangesAsync();
+            TempData["AnalyticsGameAdded"] = gameId;
         }
         return RedirectToAction(nameof(Edit), new { id = entry.Id });
     }

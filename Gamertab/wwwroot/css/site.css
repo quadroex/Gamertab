@@ -180,6 +180,8 @@ h2 { font-size: 25px; }
 .journal-block { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
 .journal-block[data-remote-change] { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
 .journal-remote-notice { color: var(--accent); font-size: 12px; margin: 0 0 16px; }
+.analytics-consent { position: fixed; bottom: 16px; left: 16px; right: 16px; max-width: 700px; margin: auto; z-index: 1200; box-shadow: 0 8px 40px #0008; }
+.analytics-consent p { color: var(--muted); font-size: 13px; }
 .journal-block-tools { margin-bottom: 12px; font-size: 12px; }
 .journal-block-tools .form-select { width: auto; padding: 6px 30px 6px 10px; font-size: 12px; }
 .journal-block-actions { margin-left: auto; }

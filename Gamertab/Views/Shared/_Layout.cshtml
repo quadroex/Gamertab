@@ -1,9 +1,35 @@
+@inject IConfiguration Configuration
+@inject IWebHostEnvironment Environment
+@{
+    var baseUrl = (Configuration["Site:BaseUrl"] ?? "https://gamertab-917646089327.us-east1.run.app").TrimEnd('/');
+    var publicPage = ViewData["CanonicalPath"] is string;
+    var canonical = baseUrl + (ViewData["CanonicalPath"] as string ?? "/");
+    var description = ViewData["Description"] as string ?? "Discover games, explore ratings and news, and keep your gaming library in one place with Gamertab.";
+    var measurementId = Configuration["Analytics:MeasurementId"] ?? "";
+    var analyticsEnabled = (Environment.IsProduction() || Configuration.GetValue<bool>("Analytics:EnableInDevelopment")) && System.Text.RegularExpressions.Regex.IsMatch(measurementId, "^G-[A-Z0-9]+$");
+}
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Your games, next discoveries and updates in one place." />
+    <meta name="description" content="@description" />
+    @if (publicPage)
+    {
+        <link rel="canonical" href="@canonical" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="@ViewData["Title"] · Gamertab" />
+        <meta property="og:description" content="@description" />
+        <meta property="og:url" content="@canonical" />
+        @if (ViewData["ShareImage"] is string shareImage && Uri.TryCreate(shareImage, UriKind.Absolute, out var imageUri) && imageUri.Scheme == "https")
+        {
+            <meta property="og:image" content="@shareImage" />
+        }
+    }
+    else
+    {
+        <meta name="robots" content="noindex, nofollow" />
+    }
     <title>@ViewData["Title"] · Gamertab</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     @await RenderSectionAsync("Styles", required: false)
@@ -42,7 +68,24 @@
         }
         @RenderBody()
     </main>
-    <footer class="container site-footer"><span>Gamertab · Keep your next adventure close.</span><span>Game data from IGDB. News from Steam.</span></footer>
+    <footer class="container site-footer"><span>Gamertab · Keep your next adventure close.</span><span>Game data from IGDB. News from Steam.</span>
+        @if (analyticsEnabled)
+        {
+            <button class="quiet-button" type="button" data-analytics-settings>Analytics preferences</button>
+        }
+    </footer>
+    @if (analyticsEnabled)
+    {
+        <section class="analytics-consent content-panel" aria-label="Analytics preferences" data-analytics data-measurement-id="@measurementId" data-page-url="@canonical" data-public-page="@(publicPage ? "true" : "false")" data-game-id="@ViewData["AnalyticsGameId"]" data-library-added="@TempData["AnalyticsGameAdded"]" hidden>
+            <p>Allow optional Google Analytics to help improve Gamertab? We measure game views and feature usage. Your email, search text, journals and chat messages are excluded. Google receives browser and usage data.</p>
+            <div class="action-row">
+                <button type="button" class="btn btn-accent" data-analytics-accept>Allow analytics</button>
+                <button type="button" class="btn btn-subtle" data-analytics-decline>Decline</button>
+                <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google privacy policy</a>
+            </div>
+        </section>
+        <script src="~/js/analytics.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
