@@ -13,6 +13,7 @@
     <PackageReference Include="Lucene.Net" Version="4.8.0-beta00018" />
     <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00018" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.14" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" PrivateAssets="all" />
     <PackageReference Include="ModelContextProtocol" Version="2.3.0" />

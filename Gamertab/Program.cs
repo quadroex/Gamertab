@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Globalization;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.DataProtection;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Gamertab.Data;
@@ -24,6 +26,15 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Gamertab")));
+if (builder.Configuration.GetValue<bool>("DataProtection:PersistToDatabase"))
+{
+    var certificate = builder.Configuration["DataProtection:Certificate"];
+    if (string.IsNullOrWhiteSpace(certificate))
+        throw new InvalidOperationException("Configure DataProtection:Certificate before enabling persistent keys.");
+    var keyCertificate = X509CertificateLoader.LoadPkcs12(Convert.FromBase64String(certificate), null, X509KeyStorageFlags.EphemeralKeySet);
+    builder.Services.AddDataProtection().SetApplicationName("Gamertab")
+        .PersistKeysToDbContext<AppDbContext>().ProtectKeysWithCertificate(keyCertificate);
+}
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.User.RequireUniqueEmail = true;

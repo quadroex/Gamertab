@@ -40,6 +40,7 @@ services:
       Igdb__ClientSecret: ${IGDB_CLIENT_SECRET:-}
       Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Gemini__ApiKey: ${GEMINI_API_KEY:-}
     ports:
       - "127.0.0.1:5180:8080"
     depends_on:

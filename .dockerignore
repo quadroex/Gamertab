@@ -2,6 +2,7 @@
 .local
 .vs
 .env
+gha-creds-*.json
 .env.*
 **/bin
 **/obj

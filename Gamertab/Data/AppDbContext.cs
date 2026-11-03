@@ -1,11 +1,12 @@
 using Gamertab.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gamertab.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
 {
     public DbSet<Game> Games => Set<Game>();
     public DbSet<LibraryEntry> LibraryEntries => Set<LibraryEntry>();
@@ -14,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<NewsItem> NewsItems => Set<NewsItem>();
     public DbSet<UserPlan> UserPlans => Set<UserPlan>();
     public DbSet<PlayJournal> PlayJournals => Set<PlayJournal>();
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

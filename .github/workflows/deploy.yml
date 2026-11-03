@@ -1,0 +1,73 @@
+name: Build and deploy Gamertab
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gamertab-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore Gamertab.slnx
+      - name: Test
+        run: dotnet test Gamertab.slnx --configuration Release --no-restore --filter 'Category!=Browser' --verbosity minimal
+      - name: Publish
+        run: dotnet publish Gamertab/Gamertab.csproj --configuration Release --no-build --output publish
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.GCP_PROJECT_ID != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      SERVICE: gamertab
+      REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev
+      RUNTIME_ACCOUNT: ${{ vars.GCP_RUNTIME_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Sign in to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db
+      - name: Configure container registry
+        run: gcloud auth configure-docker "$REGISTRY" --quiet
+      - name: Build and push image
+        run: |
+          IMAGE="$REGISTRY/$PROJECT_ID/gamertab/web:$GITHUB_SHA"
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --image "$IMAGE" --service-account "$RUNTIME_ACCOUNT" \
+            --port 8080 --cpu 1 --memory 512Mi --concurrency 20 \
+            --min 0 --max 1 --timeout 300 --cpu-throttling \
+            --labels "commit=$GITHUB_SHA" --quiet
+          APP_URL=$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')
+          echo "APP_URL=$APP_URL" >> "$GITHUB_ENV"
+      - name: Check deployed application
+        run: |
+          curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 10 --max-time 60 "$APP_URL/health"
+          echo "Gamertab: $APP_URL" >> "$GITHUB_STEP_SUMMARY"

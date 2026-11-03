@@ -3,6 +3,7 @@
 .vs/
 .local/
 .env
+gha-creds-*.json
 .env.*
 !.env.example
 TestResults/
