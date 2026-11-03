@@ -25,7 +25,7 @@ public class BrowserFactory : PlanFactory
         }));
         builder.ConfigureServices(services =>
         {
-            services.AddHttpClient<GeminiAgent>().ConfigurePrimaryHttpMessageHandler(() => new AssistantBackchannel { Answer = "### Your library\n\n* **Portal 2** - Puzzle\n* *Cyberpunk 2077* - RPG\n\n[Open Portal 2](/Games/Details/1)" });
+            services.AddHttpClient<GeminiAgent>().ConfigurePrimaryHttpMessageHandler(() => new AssistantBackchannel { Answer = "### Your library\n\n* **[Portal 2](/Games/Details/1)** - Puzzle\n* *Cyberpunk 2077* - RPG\n\n[Open Portal 2](/Games/Details/1)" });
             services.AddHttpClient<IgdbClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamNewsClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
             services.AddHttpClient<SteamStoreClient>().ConfigurePrimaryHttpMessageHandler(() => new BrowserBackchannel());
@@ -156,6 +156,7 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         await Expect(page.Locator(".assistant-text h3")).ToHaveTextAsync("Your library");
         await Expect(page.Locator(".assistant-text li")).ToHaveCountAsync(2);
         await Expect(page.Locator(".assistant-text li strong")).ToHaveTextAsync("Portal 2");
+        await Expect(page.Locator(".assistant-text li strong a")).ToHaveAttributeAsync("href", "/Games/Details/1");
         await Expect(page.Locator(".assistant-text li em")).ToHaveTextAsync("Cyberpunk 2077");
         await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Open Portal 2" })).ToHaveAttributeAsync("href", "/Games/Details/1");
         Assert.DoesNotContain("*", await page.Locator(".assistant-text").Last.InnerTextAsync());

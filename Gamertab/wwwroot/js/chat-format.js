@@ -5,7 +5,9 @@ window.formatChat = (element, text) => {
         for (const match of value.matchAll(tokens)) {
             parent.append(document.createTextNode(value.slice(position, match.index)));
             const node = document.createElement(match[2] ? 'a' : match[3] || match[4] ? 'strong' : match[5] ? 'code' : 'em');
-            node.textContent = match[1] ?? match[3] ?? match[4] ?? match[5] ?? match[6] ?? match[7];
+            const content = match[1] ?? match[3] ?? match[4] ?? match[5] ?? match[6] ?? match[7];
+            if (match[5]) node.textContent = content;
+            else inline(node, content);
             if (match[2]) node.href = match[2];
             parent.append(node);
             position = match.index + match[0].length;
