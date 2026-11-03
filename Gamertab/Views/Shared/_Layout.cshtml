@@ -68,7 +68,7 @@
         }
         @RenderBody()
     </main>
-    <footer class="container site-footer"><span>Gamertab · Keep your next adventure close.</span><span>Game data from IGDB. News from Steam.</span>
+    <footer class="container site-footer"><span>Gamertab · Keep your next adventure close.</span><span>Game data from IGDB. News from Steam.</span><a asp-controller="Feedback" asp-action="Index">Feedback</a>
         @if (analyticsEnabled)
         {
             <button class="quiet-button" type="button" data-analytics-settings>Analytics preferences</button>

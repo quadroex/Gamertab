@@ -9,9 +9,16 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers;
 
 [Authorize]
-public class LibraryController(AppDbContext database, RecommendationService recommendations, PlanAccess plans, LibraryExportClient export, ILogger<LibraryController> logger) : Controller
+public class LibraryController(AppDbContext database, RecommendationService recommendations, PlanAccess plans, LibraryExportClient export, ILogger<LibraryController> logger, ActivityFeed activity) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+    [HttpGet]
+    public IActionResult Activity()
+    {
+        Response.Headers.CacheControl = "no-store";
+        return View();
+    }
 
     [HttpPost]
     public async Task<IActionResult> Export()
@@ -80,7 +87,7 @@ public class LibraryController(AppDbContext database, RecommendationService reco
         {
             entry = new LibraryEntry { UserId = UserId, GameId = gameId };
             database.LibraryEntries.Add(entry);
-            await database.SaveChangesAsync();
+            await activity.RecordAsync(entry, "added");
             TempData["AnalyticsGameAdded"] = gameId;
         }
         return RedirectToAction(nameof(Edit), new { id = entry.Id });
@@ -115,7 +122,7 @@ public class LibraryController(AppDbContext database, RecommendationService reco
         if (!ModelState.IsValid)
             return View(new LibraryEditPage(entry.Game, input));
         input.ApplyTo(entry);
-        await database.SaveChangesAsync();
+        await activity.RecordAsync(entry, "updated");
         TempData["Message"] = "Your library has been updated.";
         return RedirectToAction(nameof(Index));
     }
@@ -127,7 +134,7 @@ public class LibraryController(AppDbContext database, RecommendationService reco
         if (entry is null)
             return NotFound();
         database.LibraryEntries.Remove(entry);
-        await database.SaveChangesAsync();
+        await activity.RecordAsync(entry, "removed");
         return RedirectToAction(nameof(Index));
     }
 

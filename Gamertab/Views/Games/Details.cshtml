@@ -20,7 +20,7 @@
         <a class="nav-link" href="#playtime">Playtime</a>
         <a class="nav-link" href="#news">News</a>
     </div>
-    <a class="feedback-link" href="https://github.com/quadroex/Gamertab/issues" target="_blank" rel="noopener noreferrer">Feedback ↗</a>
+    <a class="feedback-link" asp-controller="Feedback" asp-action="Index" asp-route-gameId="@game.Id">Feedback</a>
 </nav>
 @if (ViewData["DetailsNotice"] is string detailsNotice)
 {

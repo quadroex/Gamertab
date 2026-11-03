@@ -38,7 +38,7 @@ public class StatisticsTests
             new LibraryEntry { UserId = "other", GameId = games[5].Id, Status = PlayStatus.Completed, PersonalRating = 10, CompletedOn = today });
         await database.SaveChangesAsync();
         var controller = new LibraryController(database, scope.ServiceProvider.GetRequiredService<RecommendationService>(), scope.ServiceProvider.GetRequiredService<PlanAccess>(),
-            scope.ServiceProvider.GetRequiredService<LibraryExportClient>(), scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LibraryController>>())
+            scope.ServiceProvider.GetRequiredService<LibraryExportClient>(), scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LibraryController>>(), scope.ServiceProvider.GetRequiredService<ActivityFeed>())
         {
             ControllerContext = new ControllerContext
             {

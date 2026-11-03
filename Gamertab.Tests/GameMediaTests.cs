@@ -85,7 +85,7 @@ public class GameMediaTests
         Assert.Contains("Screenshots", html);
         Assert.Contains("Play video", html);
         Assert.Contains("data-video-id=\"abcDEF12_-3\"", html);
-        Assert.Contains("https://github.com/quadroex/Gamertab/issues", html);
+        Assert.Contains("/Feedback?gameId=", html);
         Assert.Contains("href=\"#media\"", html);
         Assert.DoesNotContain("<iframe", html);
         Assert.DoesNotContain("javascript:bad", html);

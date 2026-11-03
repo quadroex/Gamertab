@@ -9,6 +9,8 @@ namespace Gamertab.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<IdentityUser>(options), IDataProtectionKeyContext
 {
     public DbSet<Game> Games => Set<Game>();
+    public DbSet<FeedbackRequest> FeedbackRequests => Set<FeedbackRequest>();
+    public DbSet<LibraryActivity> LibraryActivities => Set<LibraryActivity>();
     public DbSet<LibraryEntry> LibraryEntries => Set<LibraryEntry>();
     public DbSet<GameCollection> Collections => Set<GameCollection>();
     public DbSet<CollectionItem> CollectionItems => Set<CollectionItem>();
@@ -20,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<LibraryActivity>().HasIndex(activity => new { activity.UserId, activity.Id });
         builder.Entity<PlayJournal>().HasKey(journal => new { journal.UserId, journal.GameId });
         builder.Entity<UserPlan>().HasOne(plan => plan.User).WithOne().HasForeignKey<UserPlan>(plan => plan.UserId);
         builder.Entity<Game>().HasIndex(game => game.IgdbId).IsUnique();

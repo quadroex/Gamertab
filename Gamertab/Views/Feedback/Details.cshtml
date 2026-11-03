@@ -1,0 +1,11 @@
+@model FeedbackTicketPage
+@{ ViewData["Title"] = "Feedback request"; }
+<a class="back-link" asp-action="Index">← Feedback</a>
+<section class="content-panel">
+    <p class="eyebrow accent">Your feedback</p>
+    <h1>@Model.Request.Subject</h1>
+    <p class="muted">Sent @Model.Request.CreatedUtc.ToString("dd MMM yyyy HH:mm") UTC · @Model.Request.Category</p>
+    @if (Model.Status is null) { <p class="notice">The current status is temporarily unavailable. Your request is saved.</p> }
+    else { <p>Status <strong>@Model.Status</strong></p><p style="white-space: pre-wrap">@Model.Message</p> }
+    <a class="btn btn-subtle" asp-action="Details" asp-route-id="@Model.Request.Id">Refresh status</a>
+</section>

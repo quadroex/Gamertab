@@ -1,0 +1,26 @@
+@{ ViewData["Title"] = "Library activity"; }
+<a class="back-link" asp-action="Index">← My library</a>
+<div class="page-heading"><p class="eyebrow accent">Your library, live</p><h1>Library activity</h1><p class="muted">Game additions, updates and removals from Gamertab appear here across your open browsers.</p></div>
+<section data-activity>
+    <p role="status" aria-live="polite" data-activity-status>Connecting…</p>
+    <details class="content-panel">
+        <summary>Connection details</summary>
+        <label class="form-label" for="activity-mode">Update method</label>
+        <select id="activity-mode" class="form-select" data-activity-mode>
+            <option value="signalr">Automatic (SignalR)</option>
+            <option value="websocket">WebSocket</option>
+            <option value="longpoll">Long polling</option>
+            <option value="adaptive">Adaptive polling</option>
+        </select>
+        <p class="form-hint">Automatic chooses an available connection. Polling can be useful on networks that block persistent connections.</p>
+        <p data-activity-metrics></p>
+        <p class="form-hint">Counters cover activity fetches and received application payloads. HTTP headers, connection setup and transport keepalives are excluded.</p>
+        <button type="button" class="quiet-button" data-activity-reset>Reset counters</button>
+    </details>
+    <p class="notice" data-activity-empty>No activity yet. Add a game or update its status to get started.</p>
+    <div data-activity-items aria-live="polite" aria-relevant="additions"></div>
+</section>
+@section Scripts {
+    <script src="~/lib/signalr/signalr.min.js" asp-append-version="true"></script>
+    <script src="~/js/library-activity.js" asp-append-version="true"></script>
+}

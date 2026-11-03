@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'browser-test', 'api-test', 'queue-test', 'blob-test', 'mcp', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'browser-test', 'connectivity-test', 'api-test', 'queue-test', 'blob-test', 'mcp', 'down', 'status')]
     [string]$Action = 'run',
     [string]$AccountEmail
 )
@@ -24,6 +24,22 @@ if ($Action -eq 'mcp') {
 if ($Action -eq 'test') {
     dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --artifacts-path (Join-Path $statePath 'artifacts') --filter 'Category!=Browser' --verbosity minimal
     exit $LASTEXITCODE
+}
+
+if ($Action -eq 'connectivity-test') {
+    $previousBenchmark = $env:GAMERTAB_ACTIVITY_BENCHMARK
+    try {
+        $env:GAMERTAB_ACTIVITY_BENCHMARK = '1'
+        dotnet test (Join-Path $projectRoot 'Gamertab.slnx') --artifacts-path (Join-Path $statePath 'artifacts') --filter 'FullyQualifiedName~ActivityBenchmarkTests' --verbosity minimal
+        $benchmarkExit = $LASTEXITCODE
+        $benchmarkFile = Join-Path $statePath 'artifacts\bin\Gamertab.Tests\debug\browser-results\connectivity.json'
+        if ($benchmarkExit -eq 0 -and (Test-Path -LiteralPath $benchmarkFile)) {
+            (Get-Content -LiteralPath $benchmarkFile -Raw | ConvertFrom-Json).results | Format-Table mode, httpRequests, receivedPayloadBytes, averageDelayMs, maximumDelayMs, serverAndHarnessCpuMs, serverAndHarnessAllocatedKiB
+            Write-Output ('Connectivity results: ' + $benchmarkFile)
+        }
+    }
+    finally { $env:GAMERTAB_ACTIVITY_BENCHMARK = $previousBenchmark }
+    exit $benchmarkExit
 }
 
 if ($Action -eq 'browser-test') {
@@ -97,6 +113,7 @@ if ($Action -in @('up', 'run', 'api-test', 'queue-test', 'blob-test')) {
         GOOGLE_CLIENT_ID = 'Authentication:Google:ClientId'
         GOOGLE_CLIENT_SECRET = 'Authentication:Google:ClientSecret'
         GEMINI_API_KEY = 'Gemini:ApiKey'
+        HUBSPOT_ACCESS_TOKEN = 'Crm:AccessToken'
     }
     foreach ($line in (Get-Content -LiteralPath $environmentPath)) {
         foreach ($item in $integrationKeys.GetEnumerator()) {
@@ -135,7 +152,7 @@ switch ($Action) {
             DOTNET_ENVIRONMENT = 'Development'
             ASPNETCORE_ENVIRONMENT = 'Development'
         }
-        foreach ($name in @('Igdb:ClientId', 'Igdb:ClientSecret', 'Authentication:Google:ClientId', 'Authentication:Google:ClientSecret', 'Gemini:ApiKey')) {
+        foreach ($name in @('Igdb:ClientId', 'Igdb:ClientSecret', 'Authentication:Google:ClientId', 'Authentication:Google:ClientSecret', 'Gemini:ApiKey', 'Crm:AccessToken')) {
             if (-not [string]::IsNullOrWhiteSpace($localSecrets[$name])) {
                 $runEnvironment[$name.Replace(':', '__')] = $localSecrets[$name]
             }

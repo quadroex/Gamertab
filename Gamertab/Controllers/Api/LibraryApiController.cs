@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Gamertab.Data;
 using Gamertab.Models;
+using Gamertab.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Gamertab.Controllers.Api;
 
 [Authorize, ApiController, Route("api/library")]
-public class LibraryApiController(AppDbContext database) : ControllerBase
+public class LibraryApiController(AppDbContext database, ActivityFeed activity) : ControllerBase
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -34,7 +35,7 @@ public class LibraryApiController(AppDbContext database) : ControllerBase
         var entry = new LibraryEntry { UserId = UserId, GameId = input.GameId };
         input.ApplyTo(entry);
         database.LibraryEntries.Add(entry);
-        await database.SaveChangesAsync();
+        await activity.RecordAsync(entry, "added");
         return CreatedAtAction(nameof(Details), new { id = entry.Id }, new { entry.Id, entry.GameId, entry.Status });
     }
 
@@ -47,7 +48,7 @@ public class LibraryApiController(AppDbContext database) : ControllerBase
         if (input.GameId != entry.GameId)
             return BadRequest(new { error = "The game of an existing entry cannot be changed." });
         input.ApplyTo(entry);
-        await database.SaveChangesAsync();
+        await activity.RecordAsync(entry, "updated");
         return Ok(new { entry.Id, entry.GameId, entry.Status });
     }
 
@@ -58,7 +59,7 @@ public class LibraryApiController(AppDbContext database) : ControllerBase
         if (entry is null)
             return NotFound();
         database.LibraryEntries.Remove(entry);
-        await database.SaveChangesAsync();
+        await activity.RecordAsync(entry, "removed");
         return NoContent();
     }
 }

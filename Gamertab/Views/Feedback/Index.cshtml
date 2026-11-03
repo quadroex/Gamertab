@@ -1,0 +1,27 @@
+@model FeedbackInput
+@{
+    ViewData["Title"] = "Feedback";
+    var available = ViewData["FeedbackAvailable"] is true;
+    var requests = ViewData["Requests"] as List<FeedbackRequest> ?? [];
+}
+<div class="page-heading"><p class="eyebrow accent">Help improve Gamertab</p><h1>Feedback</h1><p class="muted">Report a problem, suggest a feature or ask us to check game information.</p></div>
+<section class="content-panel">
+    @if (!available) { <p class="notice">Feedback is temporarily unavailable. You can also <a href="https://github.com/quadroex/Gamertab/issues" target="_blank" rel="noopener noreferrer">open a GitHub issue</a>.</p> }
+    <form asp-action="Send" method="post">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <input asp-for="GameId" type="hidden" />
+        @if (ViewData["GameName"] is string gameName) { <p class="muted">Regarding @gameName</p> }
+        <div class="mb-3"><label asp-for="Category" class="form-label">Category</label><select asp-for="Category" class="form-select"><option value="Bug">Problem or bug</option><option value="Suggestion">Suggestion</option><option value="GameInformation">Game information</option></select></div>
+        <div class="mb-3"><label asp-for="Subject" class="form-label"></label><input asp-for="Subject" class="form-control" maxlength="150" required /></div>
+        <div class="mb-3"><label asp-for="Message" class="form-label"></label><textarea asp-for="Message" class="form-control" rows="5" minlength="10" maxlength="4000" required></textarea></div>
+        <div class="mb-3"><label asp-for="ReplyEmail" class="form-label">Reply email (optional)</label><input asp-for="ReplyEmail" class="form-control" type="email" maxlength="254" /></div>
+        <p class="form-hint">Your message, selected game link and optional reply email will be sent to Gamertab's support workspace in HubSpot. Your account email, library and journals are not included automatically. You can send up to five requests per hour.</p>
+        <button class="btn btn-accent" type="submit" disabled="@(!available)">Send feedback</button>
+    </form>
+</section>
+@if (requests.Count > 0)
+{
+    <section class="content-panel"><h2>Your recent requests</h2>
+        @foreach (var request in requests) { <p><a asp-action="Details" asp-route-id="@request.Id">@request.Subject</a> <span class="muted">@request.CreatedUtc.ToString("dd MMM yyyy")</span></p> }
+    </section>
+}

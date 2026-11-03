@@ -143,6 +143,53 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         return email;
     }
 
+    [Theory]
+    [InlineData("signalr")]
+    [InlineData("websocket")]
+    [InlineData("longpoll")]
+    [InlineData("adaptive")]
+    public async Task LibraryActivityDeliversChangesThroughEachTransportAndRestoresHistory(string mode)
+    {
+        await using var first = await fixture.NewContextAsync();
+        var page = await first.NewPageAsync();
+        var email = await RegisterAsync(page);
+        var ownerSession = (await (await first.APIRequest.GetAsync("/api/account/session")).JsonAsync())!.Value;
+        var headers = new Dictionary<string, string> { ["X-CSRF-TOKEN"] = ownerSession.GetProperty("csrfToken").GetString()! };
+        var created = await first.APIRequest.PostAsync("/api/library", new() { Headers = headers, DataObject = new { gameId = 1 } });
+        Assert.Equal(201, created.Status);
+        var entryId = (await created.JsonAsync())!.Value.GetProperty("id").GetInt32();
+        await using var second = await fixture.NewContextAsync();
+        var anonymousSession = (await (await second.APIRequest.GetAsync("/api/account/session")).JsonAsync())!.Value;
+        var login = await second.APIRequest.PostAsync("/api/account/login", new()
+        {
+            Headers = new Dictionary<string, string> { ["X-CSRF-TOKEN"] = anonymousSession.GetProperty("csrfToken").GetString()! }, DataObject = new { email, password = Password }
+        });
+        Assert.Equal(200, login.Status);
+        var remote = await second.NewPageAsync();
+        var errors = new List<string>();
+        remote.PageError += (_, error) => errors.Add(error);
+        await remote.GotoAsync("/Library/Activity");
+        await Expect(remote.Locator("[data-event-id]")).ToHaveCountAsync(1);
+        await remote.GetByText("Connection details", new() { Exact = true }).ClickAsync();
+        await remote.GetByLabel("Update method").SelectOptionAsync(mode);
+        Assert.Equal(200, (await first.APIRequest.PutAsync($"/api/library/{entryId}", new() { Headers = headers, DataObject = new { gameId = 1, status = "Completed" } })).Status);
+        await Expect(remote.GetByText("Library entry updated", new() { Exact = true })).ToBeVisibleAsync(new() { Timeout = 15000 });
+        await Expect(remote.Locator("[data-event-id]")).ToHaveCountAsync(2);
+        if (mode == "websocket")
+        {
+            await second.SetOfflineAsync(true);
+            Assert.Equal(200, (await first.APIRequest.PutAsync($"/api/library/{entryId}", new() { Headers = headers, DataObject = new { gameId = 1, status = "Playing" } })).Status);
+            await second.SetOfflineAsync(false);
+            await Expect(remote.Locator("[data-event-id]")).ToHaveCountAsync(3, new() { Timeout = 15000 });
+        }
+        Assert.Equal(204, (await first.APIRequest.DeleteAsync($"/api/library/{entryId}", new() { Headers = headers })).Status);
+        await Expect(remote.GetByText("Removed from your library", new() { Exact = true })).ToBeVisibleAsync(new() { Timeout = 15000 });
+        var count = await remote.Locator("[data-event-id]").CountAsync();
+        await remote.ReloadAsync();
+        await Expect(remote.Locator("[data-event-id]")).ToHaveCountAsync(count);
+        Assert.Empty(errors);
+    }
+
     [Fact]
     public async Task AssistantShowsToolResultsStreamsTextAndClearsConversation()
     {
@@ -316,7 +363,7 @@ public class BrowserTests(BrowserFixture fixture) : IClassFixture<BrowserFixture
         await Expect(page.GetByRole(AriaRole.Dialog)).ToBeHiddenAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "Play video", Exact = false }).ClickAsync();
         await Expect(page.Locator("iframe")).ToHaveAttributeAsync("src", "https://www.youtube-nocookie.com/embed/abcDEF12_-3?autoplay=1&rel=0");
-        await Expect(page.GetByRole(AriaRole.Link, new() { Name = "Feedback", Exact = false })).ToBeVisibleAsync();
+        await Expect(page.Locator(".feedback-link")).ToBeVisibleAsync();
     }
 
     [Fact]

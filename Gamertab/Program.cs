@@ -77,12 +77,23 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration["BlobStorage:GoogleBucket"]
     builder.Services.AddSingleton(_ => StorageClient.Create());
 builder.Services.AddScoped<PlanAccess>();
 builder.Services.AddScoped<JournalStore>();
+builder.Services.AddScoped<ActivityFeed>();
+builder.Services.AddSingleton<ActivitySignal>();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient<GeminiAgent>(client => client.Timeout = TimeSpan.FromSeconds(90));
 builder.Services.AddHttpClient<LibraryExportClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient<HubSpotClient>(client => client.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.HttpContext.Request.Path.StartsWithSegments("/Feedback"))
+            await context.HttpContext.Response.WriteAsync("Too many feedback requests. Please try again later.", cancellationToken);
+    };
+    options.AddPolicy("feedback", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromHours(1), QueueLimit = 0 }));
     options.AddPolicy("assistant", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 6, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
@@ -99,9 +110,10 @@ if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseWebSockets();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/hubs/journal") && context.Request.Headers.TryGetValue("Origin", out var origin) &&
+    if ((context.Request.Path.StartsWithSegments("/hubs") || context.Request.Path == "/api/activity/socket") && context.Request.Headers.TryGetValue("Origin", out var origin) &&
         (!Uri.TryCreate(origin.ToString(), UriKind.Absolute, out var uri) || uri.Authority != context.Request.Host.Value || uri.Scheme != context.Request.Scheme))
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -115,6 +127,7 @@ app.UseRateLimiter();
 app.UseOutputCache();
 app.MapGet("/health", () => Results.Ok(new { status = "ok", application = "Gamertab" }));
 app.MapHub<JournalHub>("/hubs/journal");
+app.MapHub<ActivityHub>("/hubs/activity");
 app.MapControllerRoute("default", "{controller=Games}/{action=Index}/{id?}");
 
 await using (var scope = app.Services.CreateAsyncScope())
