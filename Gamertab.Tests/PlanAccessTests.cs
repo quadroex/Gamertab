@@ -32,6 +32,34 @@ public class PlanFactory : AppFactory
 
 public class PlanAccessTests
 {
+    private class ConfiguredDemoFactory : AppFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Features:AllowDemoPlanChanges"] = "true" }));
+        }
+    }
+
+    [Fact]
+    public async Task ExplicitDemoFlagEnablesUpgradeOutsideDevelopmentWithoutChangingOtherAccounts()
+    {
+        using var factory = new ConfiguredDemoFactory();
+        var (owner, _) = await RegisterAsync(factory);
+        var (other, _) = await RegisterAsync(factory);
+        using (owner)
+        using (other)
+        {
+            Assert.Contains("Upgrade to Premium", await owner.GetStringAsync("/Account/Settings"));
+            Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync("/Library/Statistics")).StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, (await ChangeAsync(owner, "Premium")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await owner.GetAsync("/Library/Statistics")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await other.GetAsync("/Library/Statistics")).StatusCode);
+            Assert.Equal(HttpStatusCode.Redirect, (await ChangeAsync(owner, "Standard")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync("/Library/Statistics")).StatusCode);
+        }
+    }
+
     private static async Task RefreshCsrfAsync(HttpClient client)
     {
         var session = await client.GetFromJsonAsync<JsonElement>("/api/account/session");

@@ -76,7 +76,7 @@ jobs:
         run: |
           gcloud run deploy "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
             --image "$IMAGE" --service-account "$RUNTIME_ACCOUNT" \
-            --update-env-vars "BlobStorage__GoogleBucket=$COVER_BUCKET,LibraryExport__Url=$EXPORT_URL" \
+            --update-env-vars "BlobStorage__GoogleBucket=$COVER_BUCKET,LibraryExport__Url=$EXPORT_URL,Features__AllowDemoPlanChanges=true" \
             --port 8080 --cpu 1 --memory 512Mi --concurrency 20 \
             --min 0 --max 1 --timeout 300 --cpu-throttling \
             --labels "commit=$GITHUB_SHA" --quiet

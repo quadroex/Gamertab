@@ -6,7 +6,7 @@ namespace Gamertab.Services;
 
 public class PlanAccess(AppDbContext database, IConfiguration configuration, IHostEnvironment environment)
 {
-    public bool CanChangePlan => environment.IsDevelopment();
+    public bool CanChangePlan => environment.IsDevelopment() || configuration.GetValue<bool>("Features:AllowDemoPlanChanges");
 
     public async Task<AccountPlanState> GetAsync(string userId)
     {
@@ -19,7 +19,7 @@ public class PlanAccess(AppDbContext database, IConfiguration configuration, IHo
     public async Task SetAsync(string userId, AccountPlan plan)
     {
         if (!CanChangePlan)
-            throw new InvalidOperationException("Demo plan changes are available only in Development.");
+            throw new InvalidOperationException("Demo plan changes are not enabled.");
         if (!Enum.IsDefined(plan))
             throw new ArgumentOutOfRangeException(nameof(plan));
         await database.Database.ExecuteSqlInterpolatedAsync($"""

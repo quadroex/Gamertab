@@ -16,7 +16,7 @@ if (activity) {
     let interval = 1000;
     let fetching = false;
     let queued = false;
-    const updateMetrics = () => { metrics.textContent = `${requests} fetches · ${responses} payloads · ${bytes} bytes received`; };
+    const updateMetrics = () => { metrics.textContent = `${requests} ${requests === 1 ? 'fetch' : 'fetches'} · ${responses} ${responses === 1 ? 'payload' : 'payloads'} · ${bytes} bytes received`; };
     const reset = () => { requests = responses = bytes = 0; updateMetrics(); };
     const apply = batch => {
         batch.events.forEach(event => {
