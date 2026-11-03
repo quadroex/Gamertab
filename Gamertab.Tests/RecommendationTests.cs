@@ -57,7 +57,7 @@ public class RecommendationTests
     }
 
     [Fact]
-    public async Task HomepagePutsPersonalPicksFirstAndDoesNotUseLowRatingsAsFavourites()
+    public async Task PersonalPicksStayOnForYouAndDoNotUseLowRatingsAsFavourites()
     {
         using var factory = new AppFactory();
         using var client = factory.CreateClient();
@@ -77,12 +77,15 @@ public class RecommendationTests
         response.EnsureSuccessStatusCode();
         var id = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetInt32();
         var html = await client.GetStringAsync("/");
-        var picks = html.IndexOf("Recommended for you", StringComparison.Ordinal);
-        var catalogue = html.IndexOf("id=\"catalogue\"", StringComparison.Ordinal);
-        Assert.True(picks >= 0 && picks < catalogue);
-        Assert.Contains("Because you like Portal 2", html);
-        Assert.DoesNotContain("/Games/Details/1", html[picks..catalogue]);
+        Assert.Contains("id=\"catalogue\"", html);
+        Assert.DoesNotContain("Recommended for you", html);
+        Assert.DoesNotContain("Because you like", html);
+        var picks = await client.GetStringAsync("/Library/Recommendations");
+        Assert.Contains("Because you like Portal 2", picks);
+        Assert.DoesNotContain("/Games/Details/1\"", picks);
         (await client.PutAsJsonAsync($"/api/library/{id}", new { gameId = 1, status = "Playing", personalRating = 2 })).EnsureSuccessStatusCode();
-        Assert.DoesNotContain("Recommended for you", await client.GetStringAsync("/"));
+        var afterLowRating = await client.GetStringAsync("/Library/Recommendations");
+        Assert.DoesNotContain("Because you like Portal 2", afterLowRating);
+        Assert.Contains("Give us a starting point", afterLowRating);
     }
 }
