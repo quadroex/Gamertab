@@ -1,0 +1,194 @@
+[
+  {
+    "Name": "local",
+    "Url": "http://localhost:5180",
+    "AddedLibraryEntries": 0,
+    "Entries": [
+      {
+        "Name": "Portal 2",
+        "GameId": 1,
+        "EntryId": 7,
+        "Details": "http://localhost:5180/Games/Details/1",
+        "Journal": "http://localhost:5180/Library/Journal/7"
+      },
+      {
+        "Name": "Hades",
+        "GameId": 4,
+        "EntryId": 8,
+        "Details": "http://localhost:5180/Games/Details/4",
+        "Journal": "http://localhost:5180/Library/Journal/8"
+      },
+      {
+        "Name": "Celeste",
+        "GameId": 21,
+        "EntryId": 9,
+        "Details": "http://localhost:5180/Games/Details/21",
+        "Journal": "http://localhost:5180/Library/Journal/9"
+      },
+      {
+        "Name": "Hollow Knight",
+        "GameId": 22,
+        "EntryId": 10,
+        "Details": "http://localhost:5180/Games/Details/22",
+        "Journal": "http://localhost:5180/Library/Journal/10"
+      },
+      {
+        "Name": "Cyberpunk 2077",
+        "GameId": 2,
+        "EntryId": 3,
+        "Details": "http://localhost:5180/Games/Details/2",
+        "Journal": "http://localhost:5180/Library/Journal/3"
+      },
+      {
+        "Name": "Stardew Valley",
+        "GameId": 5,
+        "EntryId": 12,
+        "Details": "http://localhost:5180/Games/Details/5",
+        "Journal": "http://localhost:5180/Library/Journal/12"
+      },
+      {
+        "Name": "Balatro",
+        "GameId": 23,
+        "EntryId": 13,
+        "Details": "http://localhost:5180/Games/Details/23",
+        "Journal": "http://localhost:5180/Library/Journal/13"
+      },
+      {
+        "Name": "Disco Elysium",
+        "GameId": 24,
+        "EntryId": 14,
+        "Details": "http://localhost:5180/Games/Details/24",
+        "Journal": "http://localhost:5180/Library/Journal/14"
+      },
+      {
+        "Name": "Elden Ring",
+        "GameId": 7,
+        "EntryId": 15,
+        "Details": "http://localhost:5180/Games/Details/7",
+        "Journal": "http://localhost:5180/Library/Journal/15"
+      },
+      {
+        "Name": "Dead by Daylight",
+        "GameId": 3,
+        "EntryId": 16,
+        "Details": "http://localhost:5180/Games/Details/3",
+        "Journal": "http://localhost:5180/Library/Journal/16"
+      },
+      {
+        "Name": "Outer Wilds",
+        "GameId": 25,
+        "EntryId": 17,
+        "Details": "http://localhost:5180/Games/Details/25",
+        "Journal": "http://localhost:5180/Library/Journal/17"
+      }
+    ],
+    "Collections": [
+      {
+        "Name": "Weekend picks",
+        "Id": 3,
+        "Url": "http://localhost:5180/Collections/Details/3"
+      },
+      {
+        "Name": "Stories to discover",
+        "Id": 4,
+        "Url": "http://localhost:5180/Collections/Details/4"
+      }
+    ]
+  },
+  {
+    "Name": "cloud",
+    "Url": "https://gamertab-917646089327.us-east1.run.app",
+    "AddedLibraryEntries": 0,
+    "Entries": [
+      {
+        "Name": "Portal 2",
+        "GameId": 1,
+        "EntryId": 5,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/1",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/5"
+      },
+      {
+        "Name": "Hades",
+        "GameId": 4,
+        "EntryId": 6,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/4",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/6"
+      },
+      {
+        "Name": "Celeste",
+        "GameId": 8,
+        "EntryId": 7,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/8",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/7"
+      },
+      {
+        "Name": "Hollow Knight",
+        "GameId": 9,
+        "EntryId": 8,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/9",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/8"
+      },
+      {
+        "Name": "Cyberpunk 2077",
+        "GameId": 2,
+        "EntryId": 9,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/2",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/9"
+      },
+      {
+        "Name": "Stardew Valley",
+        "GameId": 5,
+        "EntryId": 10,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/5",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/10"
+      },
+      {
+        "Name": "Balatro",
+        "GameId": 7,
+        "EntryId": 11,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/7",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/11"
+      },
+      {
+        "Name": "Disco Elysium",
+        "GameId": 10,
+        "EntryId": 12,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/10",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/12"
+      },
+      {
+        "Name": "Elden Ring",
+        "GameId": 11,
+        "EntryId": 13,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/11",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/13"
+      },
+      {
+        "Name": "Dead by Daylight",
+        "GameId": 3,
+        "EntryId": 14,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/3",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/14"
+      },
+      {
+        "Name": "Outer Wilds",
+        "GameId": 12,
+        "EntryId": 15,
+        "Details": "https://gamertab-917646089327.us-east1.run.app/Games/Details/12",
+        "Journal": "https://gamertab-917646089327.us-east1.run.app/Library/Journal/15"
+      }
+    ],
+    "Collections": [
+      {
+        "Name": "Weekend picks",
+        "Id": 4,
+        "Url": "https://gamertab-917646089327.us-east1.run.app/Collections/Details/4"
+      },
+      {
+        "Name": "Stories to discover",
+        "Id": 5,
+        "Url": "https://gamertab-917646089327.us-east1.run.app/Collections/Details/5"
+      }
+    ]
+  }
+]

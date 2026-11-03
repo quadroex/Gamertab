@@ -1,0 +1,645 @@
+{
+  "date": "2026-11-03",
+  "commit": "95ce590080bedf3035d902fd2a6e68a9902598cf",
+  "unitAndIntegrationAndBrowser": {
+    "passed": 134,
+    "failed": 0,
+    "skipped": 0,
+    "tests": [
+      {
+        "name": "Gamertab.Tests.SearchTests.ApiSearchesDescriptionsThemesAndNamePrefixes(query: \"FANTASY\", expectedName: \"Hades\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.InvalidSelectionsAreRejectedBeforeImport(gameKey: \"saved:-1\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.EmptyAndPunctuationQueriesDoNotCauseParserErrors(query: \"\\\"*:+()[]\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.EmptyAndPunctuationQueriesDoNotCauseParserErrors(query: \"   \")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.StoreFailuresCanBeHandledWithoutBreakingGameDetails(body: \"Service unavailable\", status: ServiceUnavailable)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.FeedbackTests.FailedDeliveryPreservesFormWithoutClaimingItWasSent",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.EmptySearchDoesNotInventLocalMatches",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.AnotherUserCannotSearchOrImportIntoTheCollection",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.LibraryExportTests.FunctionFormatsMarkdownEscapesGameTitlesAndRejectsInvalidRequests",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.JournalsSyncAcrossBrowsersAndPreserveConflictingOfflineDrafts",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.StoreFailuresCanBeHandledWithoutBreakingGameDetails(body: \"[]\", status: OK)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.ApiSearchesDescriptionsThemesAndNamePrefixes(query: \"cyberp\", expectedName: \"Cyberpunk 2077\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.LibrarySupportsCreateUpdateReadAndDelete",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.CancelledGoogleLoginDoesNotSignIn",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.PasswordLoginRejectsWrongPasswordAndLogoutEndsTheSession",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.AssistantTests.TemporaryProviderFailureRetriesOnceAndPreservesUkrainianInput",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.FeedbackTests.FeedbackCreatesRealCrmRequestAndReadsStatusOnlyForItsOwner",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.InvalidPaginationIsRejected(query: \"skip=0&limit=0\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.DiscountedUsdPricesAreReadFromSteamAndCached",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.NewsQueueTests.FollowedGamesAreQueuedOnceAndRepeatedDeliveryDoesNotDuplicateNews",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.UpdatesAndRebuildsRemoveOutdatedTermsWithoutDuplicatingGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.MissingCsrfTokenPreventsChanges",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.CollectionPickerEditsAndAccountIsolationWorkWithoutRemovingLibraryGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.InvalidSelectionsAreRejectedBeforeImport(gameKey: \"igdb:2147483648\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.RemoteJournalChangesAnimateAndHighlightWhilePreservingFocus",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GameMediaTests.DetailsIncludeMediaAndFeedbackWithoutLoadingTheYouTubePlayer",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.SavedCatalogueUsesFullTextSearchAndKeepsGenreFilters",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.HomepageShowsRemoteGamesAndOffersAnotherPage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.MetacriticScoresAreOptionalAndLinksMustPointToTheSource(score: 101, url: \"https://www.metacritic.com/game/portal-2/\", hasLink: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.McpToolsTests.ToolsRejectInvalidLimitsAndUnknownGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.ServiceFailureShowsAnErrorWithoutSubstitutingSavedGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.UnsafeCollectionImageUrlIsRejected",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.LibraryActivityDeliversChangesThroughEachTransportAndRestoresHistory(mode: \"longpoll\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.JournalTests.LegacyDocumentsAndIdlessClientsReceiveConsistentBlockIdsWithoutChangingOldNotes",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.PrivateApiRequiresAuthentication",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.RepeatedFavouriteDoesNotArtificiallyIncreaseScore",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionCoverTests.CollectionFormCreatesAnUploadKeepsItOnEditAndSwitchesToALinkOrNoCover",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.ApiSearchPreservesRelevanceAcrossPagesAndHandlesLargeOffsets",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.AssistantTests.InvalidMessagesAndMissingCsrfNeverReachGemini",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.ScreenshotKeyboardNavigationAndOnDemandTrailerWork",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleCoverTests.GoogleCoversRemainPrivateAndReplacementAndDeletionCleanUpStorage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.AnotherUserCannotChangeACollection",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.CollectionsSupportMembershipAndKeepLibraryDataOnDeletion",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.StatisticsTests.StatisticsRespectOwnerMonthBoundariesMissingDatesAndUnratedGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.SelectingARemoteGameImportsItOnceAndAddsItToTheCollection",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.MissingIgdbDoesNotSubstituteSavedGamesInCollectionSearch",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.FreeMissingAndNonUsdPricesAreNotInvented(data: \"{\\\"is_free\\\":true}\", isFree: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.BrowseShowsSearchAndPopularGamesWhilePersonalPicksStayOnForYou",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.IgdbSimilarityAddsAReasonEvenWithoutMatchingTags",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.InvalidPaginationIsRejected(query: \"skip=0&limit=101\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.MatchingPerspectiveRanksAboveBroadTagsFromADifferentKindOfGame",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.NewsQueueTests.BackgroundLoopUpdatesNewsWithoutOpeningAGamePage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleCoverTests.MissingGoogleImageReturns404AndAnOutageDoesNotReplaceTheExistingCover",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.StoreFailuresCanBeHandledWithoutBreakingGameDetails(body: \"Not JSON\", status: OK)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GameMediaTests.FailedOrMissingMediaDoesNotBreakTheGamePage(failed: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.CataloguePageUsesGamertabBrand",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.LibraryActivityDeliversChangesThroughEachTransportAndRestoresHistory(mode: \"signalr\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.JournalTests.BlockIdsDistinguishIdenticalNotesAndSurviveReorderingAndEditing",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.FreeMissingAndNonUsdPricesAreNotInvented(data: \"{\\\"is_free\\\":false}\", isFree: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.McpToolsTests.ToolsReadOnlyTheConfiguredAccountAndAddGamesWithoutChangingExistingEntries",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.GoogleCreatesAnAccountAndReusesItOnTheNextLogin",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.SignedInUserCanConnectGoogleAndKeepTheSameLibrary",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.AssistantShowsToolResultsStreamsTextAndClearsConversation",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.CallbackFromAnotherBrowserCannotReuseTheState",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.LibraryActivityDeliversChangesThroughEachTransportAndRestoresHistory(mode: \"adaptive\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.MissingCredentialsDoNotTurnLiveSearchIntoASavedSearch",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionCoverTests.DeletingACollectionFromTheApiOrPageRemovesItsBlob",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.MetacriticScoresAreOptionalAndLinksMustPointToTheSource(score: 80, url: \"https://example.test/untrusted\", hasLink: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.OutputCacheTests.GameDetailsAreCachedSeparatelyForEachGame",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.AnalyticsBrowserTests.AnalyticsRequiresConsentUsesSanitizedUrlsAndCanBeDisabled",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.NamesRankAboveDescriptionsAndAllQueryWordsAreRequired",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SeoTests.PublicPagesHaveSpecificMetadataAndSitemapExcludesPrivatePages",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionCoverTests.PrivateCoversAreOnlyAccessibleToTheirOwner",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ActivityTests.ActivityRecordsCommittedChangesAndDoesNotExposeOtherAccounts",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.InvalidSelectionsAreRejectedBeforeImport(gameKey: \"unknown:1\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ActivityTests.LongPollWakesOnAChangeAndSignalSubscriptionsAreIsolated",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.OutputCacheTests.CatalogueCachesResultsAndSeparatesSearchAndPagination",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.InvalidPaginationIsRejected(query: \"skip=-1&limit=2\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.GoogleConnectionCannotBeTransferredToAnotherSignedInUser",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.InvalidStateIsRejectedBeforeContactingGoogle",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.MetacriticScoresAreOptionalAndLinksMustPointToTheSource(score: 95, url: \"https://www.metacritic.com/game/portal-2/\", hasLink: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.ExplicitDemoFlagEnablesUpgradeOutsideDevelopmentWithoutChangingOtherAccounts",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.LibraryExportTests.LibraryExportRequiresSignInCsrfAndOnlyIncludesOwnedEntries",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.DisablingTheFeatureFlagAlsoBlocksPremiumAccounts",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.InvalidDatesAndRatingDoNotCreateAnEntry",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.HostingTests.EncryptedDatabaseKeysCanRestoreProtectedDataInAnotherInstance",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.ShortQueriesDoNotReachIgdbAndSearchDoesNotImportResults",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.SearchAndGenreArePassedToIgdbWithPagination",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.NonExactRemoteMatchesAreExplainedAndStillCanBeOpened",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.NewsQueueTests.UnfollowedGamesAreSkippedAndInvalidJobsArePreservedForReview",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.InvalidFiltersDoNotReachTheRemoteService(query: \"page=10001\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.RegistrationLoginValidationAndPrivatePagesWorkInTheBrowser",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionCoverTests.CoverCanBeUploadedReplacedAndRemovedWithoutChangingTheImageLink",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GameMediaTests.MediaUsesTrustedCdnLinksAndSelectsATrailerWithoutDuplicateRequests",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.PaginationReturnsTheNextDistinctPage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.JournalTests.StaleRevisionsCannotOverwriteJournalsAndCopiesStayPrivate",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.InvalidFiltersDoNotReachTheRemoteService(query: \"page=-1\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.OutputCacheTests.SignedInRequestsBypassTheSharedCatalogueCache",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.NewsQueueTests.FailedRequestsAreRetriedThreeTimesBeforeMovingToTheFailedQueue",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.FreeMissingAndNonUsdPricesAreNotInvented(data: \"{\\\"is_free\\\":false,\\\"price_overview\\\":{\\\"currency\\\"···, isFree: False)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.AnotherUserCannotReadUpdateOrDeleteLibraryEntries",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.JournalTests.JournalsRequireAuthenticationOwnershipCsrfAndValidBlocks",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.LibraryActivityDeliversChangesThroughEachTransportAndRestoresHistory(mode: \"websocket\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.CoverPreviewReadsTheLocalFileAndRejectsInvalidImagesBeforeSaving",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GameMediaTests.FailedOrMissingMediaDoesNotBreakTheGamePage(failed: True)",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.NonDevelopmentDoesNotExposeSelfServicePlanChanges",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.GoogleLoginRequiresCsrfAndCallbacksRequireAnExternalSession",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.LiveSearchProgressValidationAndDeletionPersistAfterReload",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.ASharedGameModeAloneDoesNotCreateARecommendation",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.ApiTests.DuplicateGameIsRejected",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.MatchingEmailDoesNotAutomaticallyLinkAnExistingAccount",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SteamStoreTests.AnUnavailableListingIsCachedWithoutAFabricatedOffer",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.DemoPlanChangesRequireCsrfAndOnlyAffectTheCurrentAccount",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.ApiSearchesDescriptionsThemesAndNamePrefixes(query: \"space dwarves\", expectedName: \"Deep Rock Galactic\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.MatchingGenresAndThemesRankAboveOnlyMatchingMode",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.InvalidSelectionsAreRejectedBeforeImport(gameKey: \"\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.OutputCacheTests.ImportInvalidatesTheCatalogueAndDoesNotPreserveMissingGames",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.AssistantTests.ToolResultsAreStreamedAndPrivateDataIsExcluded",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.SearchTests.ImportsBecomeSearchableImmediately",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.GoogleLoginDoesNotRedirectToAnExternalSite(returnUrl: \"https://example.test/steal\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.GoogleLoginDoesNotRedirectToAnExternalSite(returnUrl: \"//example.test/steal\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.GoogleLoginTests.UnverifiedGoogleEmailCannotCreateAnAccount",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.AssistantTests.ExhaustedGeminiQuotaIsReportedAsAnErrorEvent",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.RecommendationTests.PersonalPicksStayOnForYouAndDoNotUseLowRatingsAsFavourites",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.JournalBlocksCanBeDraggedExportedAndRestoredAfterBrowserRestart",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.AnonymousVisitorCanOpenAndCacheRemoteDetailsWithoutDuplicates",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.StandardCannotReadStatisticsAndUpgradePersistsAfterLogin",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.InvalidFiltersDoNotReachTheRemoteService(query: \"genre=Unknown\")",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.BrowserTests.StatisticsRenderRealChartsAndStayPrivateToEachAccount",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionCoverTests.InvalidAndOversizedFilesLeaveTheExistingCoverIntact",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CatalogTests.ExistingGamesUseTheirSavedDetailsPage",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.PlanAccessTests.JournalIsAvailableToStandardButOnlyForOwnedLibraryEntries",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.OutputCacheTests.RefreshInvalidatesBothDetailsAndCatalogue",
+        "outcome": "Passed"
+      },
+      {
+        "name": "Gamertab.Tests.CollectionSearchTests.FailedImportLeavesCollectionUnchangedAndShowsAMessage",
+        "outcome": "Passed"
+      }
+    ]
+  },
+  "browser": {
+    "passed": 16,
+    "failed": 0,
+    "optInBenchmarkSkipped": 1
+  },
+  "postman": {
+    "requests": 40,
+    "assertions": 65,
+    "failed": 0
+  },
+  "coverage": {
+    "allTests": {
+      "linesAll": 28.24,
+      "branchesAll": 76.75,
+      "coveredWithoutMigrations": 2226,
+      "validWithoutMigrations": 2631,
+      "linesWithoutMigrations": 84.61
+    },
+    "browserOnly": {
+      "linesAll": 18.32,
+      "branchesAll": 49.49,
+      "coveredWithoutMigrations": 1444,
+      "validWithoutMigrations": 2631,
+      "linesWithoutMigrations": 54.88
+    },
+    "language": "C# server application; not JavaScript"
+  },
+  "live": {
+    "Cloud features": [
+      "PASS real IAM-authenticated cloud function export and anonymous denial",
+      "PASS public demo Premium upgrade, feature access and downgrade",
+      "PASS real HubSpot ticket creation and status change reflected in Gamertab",
+      "PASS Cloud Run live activity via websocket",
+      "PASS Cloud Run live activity via longpoll",
+      "PASS Cloud Run live activity via adaptive",
+      "PASS Cloud Run live activity via signalr",
+      "PASS persistent cloud activity history and no unhandled browser errors",
+      "PASS temporary CRM ticket archived",
+      "PASS temporary cloud account cleanup (1)"
+    ],
+    "Cloud journals": [
+      "PASS real Cloud Run reorder, visible animation and preserved caret (808 ms including autosave)",
+      "PASS text sync in the reverse direction after reordering",
+      "PASS additions, deletions, reduced motion, persistent IDs and real SignalR WebSockets in both sessions",
+      "PASS temporary cloud account and journal removed"
+    ],
+    "Cloud storage": [
+      "PASS live upload, byte-for-byte download, anonymous denial and private bucket",
+      "PASS image and session survive replacement of the Cloud Run container",
+      "PASS replacement, invalid-file rejection and removal of obsolete objects"
+    ]
+  },
+  "googleOAuth": [
+    {
+      "site": "http://localhost:5180",
+      "scopes": [
+        "openid",
+        "profile",
+        "email"
+      ],
+      "redirectUri": "http://localhost:5180/signin-google",
+      "basicIdentityOnly": true
+    },
+    {
+      "site": "https://gamertab-917646089327.us-east1.run.app",
+      "scopes": [
+        "openid",
+        "profile",
+        "email"
+      ],
+      "redirectUri": "https://gamertab-917646089327.us-east1.run.app/signin-google",
+      "basicIdentityOnly": true
+    }
+  ],
+  "mcp": {
+    "agentExitCode": 0,
+    "portalAddedAsPlanned": true,
+    "existingStatusPreserved": true,
+    "library": [
+      {
+        "game": "Cyberpunk 2077",
+        "status": "Playing"
+      },
+      {
+        "game": "Portal 2",
+        "status": "Planned"
+      }
+    ]
+  },
+  "geminiEvents": [
+    "tool_start",
+    "tool_result",
+    "delta",
+    "delta",
+    "delta",
+    "done"
+  ],
+  "ci": "https://github.com/quadroex/Gamertab/actions/runs/41629571671"
+}

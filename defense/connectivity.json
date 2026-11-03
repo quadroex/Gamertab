@@ -1,0 +1,58 @@
+{
+  "environment": ".NET 10, local Kestrel with SQLite, headless Edge, server and measuring client share a process",
+  "scenario": "12 seconds idle, 8 library updates about 1 second apart, receiver connection setup included; payload sizes exclude HTTP/WebSocket framing and TLS",
+  "results": [
+    {
+      "mode": "websocket",
+      "updates": 8,
+      "seconds": 19.21,
+      "httpRequests": 0,
+      "webSockets": 1,
+      "receivedFrames": 9,
+      "receivedPayloadBytes": 1343,
+      "averageDelayMs": 19.3,
+      "maximumDelayMs": 79.8,
+      "serverAndHarnessCpuMs": 3609.4,
+      "serverAndHarnessAllocatedKiB": 2683
+    },
+    {
+      "mode": "longpoll",
+      "updates": 8,
+      "seconds": 19.13,
+      "httpRequests": 8,
+      "webSockets": 0,
+      "receivedFrames": 0,
+      "receivedPayloadBytes": 1318,
+      "averageDelayMs": 13.3,
+      "maximumDelayMs": 20.7,
+      "serverAndHarnessCpuMs": 2453.1,
+      "serverAndHarnessAllocatedKiB": 3569
+    },
+    {
+      "mode": "adaptive",
+      "updates": 8,
+      "seconds": 19.12,
+      "httpRequests": 9,
+      "webSockets": 0,
+      "receivedFrames": 0,
+      "receivedPayloadBytes": 1362,
+      "averageDelayMs": 401.9,
+      "maximumDelayMs": 2048.1,
+      "serverAndHarnessCpuMs": 1359.4,
+      "serverAndHarnessAllocatedKiB": 3395
+    },
+    {
+      "mode": "signalr",
+      "updates": 8,
+      "seconds": 19.14,
+      "httpRequests": 10,
+      "webSockets": 1,
+      "receivedFrames": 10,
+      "receivedPayloadBytes": 2123,
+      "averageDelayMs": 21.1,
+      "maximumDelayMs": 66.6,
+      "serverAndHarnessCpuMs": 1359.4,
+      "serverAndHarnessAllocatedKiB": 3844
+    }
+  ]
+}
