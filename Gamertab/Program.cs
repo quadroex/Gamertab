@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Google.Cloud.Storage.V1;
 
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
@@ -72,6 +73,8 @@ builder.Services.AddSingleton<GameSearchIndex>();
 builder.Services.AddScoped<RecommendationService>();
 builder.Services.AddScoped<GameCatalog>();
 builder.Services.AddScoped<CollectionCoverService>();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["BlobStorage:GoogleBucket"]))
+    builder.Services.AddSingleton(_ => StorageClient.Create());
 builder.Services.AddScoped<PlanAccess>();
 builder.Services.AddScoped<JournalStore>();
 builder.Services.AddSignalR();

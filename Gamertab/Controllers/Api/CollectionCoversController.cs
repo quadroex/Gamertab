@@ -5,6 +5,7 @@ using Gamertab.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Google;
 
 namespace Gamertab.Controllers.Api;
 
@@ -28,9 +29,12 @@ public class CollectionCoversController(AppDbContext database, CollectionCoverSe
             if (image is null)
                 return NotFound();
             Response.Headers["X-Content-Type-Options"] = "nosniff";
-            return File(image.Content, collection.CoverBlobName.EndsWith(".png") ? "image/png" : "image/jpeg");
+            return File(image, collection.CoverBlobName.EndsWith(".png") ? "image/png" : "image/jpeg");
         }
-        catch (RequestFailedException) { return StatusCode(503, new { error = "Cover storage is temporarily unavailable." }); }
+        catch (Exception exception) when (exception is RequestFailedException or GoogleApiException or HttpRequestException)
+        {
+            return StatusCode(503, new { error = "Cover storage is temporarily unavailable." });
+        }
     }
 
     [HttpPost(Name = "UploadCollectionCover"), RequestSizeLimit(CollectionCoverService.MaxBytes + 65536)]
@@ -48,7 +52,10 @@ public class CollectionCoversController(AppDbContext database, CollectionCoverSe
         }
         catch (ArgumentException exception) { return Reply(id, returnToEdit, 400, exception.Message); }
         catch (InvalidOperationException exception) { return Reply(id, returnToEdit, 409, exception.Message); }
-        catch (RequestFailedException) { return Reply(id, returnToEdit, 503, "Cover storage is temporarily unavailable. Please try again later."); }
+        catch (Exception exception) when (exception is RequestFailedException or GoogleApiException or HttpRequestException)
+        {
+            return Reply(id, returnToEdit, 503, "Cover storage is temporarily unavailable. Please try again later.");
+        }
     }
 
     [HttpDelete(Name = "DeleteCollectionCover")]

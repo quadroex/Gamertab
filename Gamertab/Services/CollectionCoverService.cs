@@ -4,6 +4,9 @@ using Azure.Storage.Blobs.Models;
 using Gamertab.Data;
 using Gamertab.Models;
 using Microsoft.EntityFrameworkCore;
+using Google;
+using Google.Cloud.Storage.V1;
+using System.Net;
 
 namespace Gamertab.Services;
 
@@ -13,12 +16,20 @@ public class CollectionCoverService
     private readonly AppDbContext database;
     private readonly ILogger<CollectionCoverService> logger;
     private readonly BlobContainerClient? container;
-    public bool IsConfigured => container is not null;
+    private readonly StorageClient? googleStorage;
+    private readonly string? googleBucket;
+    public bool IsConfigured => container is not null || googleStorage is not null;
 
-    public CollectionCoverService(AppDbContext database, IConfiguration configuration, ILogger<CollectionCoverService> logger)
+    public CollectionCoverService(AppDbContext database, IConfiguration configuration, ILogger<CollectionCoverService> logger, StorageClient? googleStorage = null)
     {
         this.database = database;
         this.logger = logger;
+        googleBucket = configuration["BlobStorage:GoogleBucket"];
+        if (!string.IsNullOrWhiteSpace(googleBucket))
+        {
+            this.googleStorage = googleStorage ?? throw new InvalidOperationException("Google Cloud Storage client is not configured.");
+            return;
+        }
         var connection = configuration.GetConnectionString("BlobStorage") ?? configuration.GetConnectionString("QueueStorage");
         if (!string.IsNullOrWhiteSpace(connection))
         {
@@ -44,11 +55,19 @@ public class CollectionCoverService
 
         var name = Guid.NewGuid().ToString("N") + (png ? ".png" : ".jpg");
         content.Position = 0;
-        await container!.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
-        await container.GetBlobClient(name).UploadAsync(content, new BlobUploadOptions
+        if (googleStorage is not null)
         {
-            HttpHeaders = new BlobHttpHeaders { ContentType = png ? "image/png" : "image/jpeg" }
-        }, cancellationToken);
+            await googleStorage.UploadObjectAsync(googleBucket, name, png ? "image/png" : "image/jpeg", content,
+                new UploadObjectOptions { IfGenerationMatch = 0 }, cancellationToken);
+        }
+        else
+        {
+            await container!.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+            await container.GetBlobClient(name).UploadAsync(content, new BlobUploadOptions
+            {
+                HttpHeaders = new BlobHttpHeaders { ContentType = png ? "image/png" : "image/jpeg" }
+            }, cancellationToken);
+        }
         try
         {
             var changed = await database.Collections.Where(item => item.Id == collection.Id && item.UserId == collection.UserId && item.CoverBlobName == collection.CoverBlobName)
@@ -65,9 +84,29 @@ public class CollectionCoverService
         return name;
     }
 
-    public async Task<BlobDownloadStreamingResult?> OpenAsync(string name, CancellationToken cancellationToken)
+    public async Task<Stream?> OpenAsync(string name, CancellationToken cancellationToken)
     {
-        try { return (await container!.GetBlobClient(name).DownloadStreamingAsync(cancellationToken: cancellationToken)).Value; }
+        if (googleStorage is not null)
+        {
+            var content = new MemoryStream();
+            try
+            {
+                await googleStorage.DownloadObjectAsync(googleBucket, name, content, cancellationToken: cancellationToken);
+                content.Position = 0;
+                return content;
+            }
+            catch (GoogleApiException exception) when (exception.HttpStatusCode == HttpStatusCode.NotFound)
+            {
+                content.Dispose();
+                return null;
+            }
+            catch
+            {
+                content.Dispose();
+                throw;
+            }
+        }
+        try { return (await container!.GetBlobClient(name).DownloadStreamingAsync(cancellationToken: cancellationToken)).Value.Content; }
         catch (RequestFailedException exception) when (exception.Status == 404) { return null; }
     }
 
@@ -94,12 +133,22 @@ public class CollectionCoverService
     {
         if (name is null)
             return;
-        if (container is null)
+        if (!IsConfigured)
         {
             logger.LogWarning("Blob storage is not configured. Cover {BlobName} was not removed.", name);
             return;
         }
-        try { await container.GetBlobClient(name).DeleteIfExistsAsync(); }
-        catch (RequestFailedException exception) { logger.LogWarning(exception, "Could not delete old collection cover {BlobName}.", name); }
+        try
+        {
+            if (googleStorage is not null)
+                await googleStorage.DeleteObjectAsync(googleBucket, name);
+            else
+                await container!.GetBlobClient(name).DeleteIfExistsAsync();
+        }
+        catch (GoogleApiException exception) when (exception.HttpStatusCode == HttpStatusCode.NotFound) { }
+        catch (Exception exception) when (exception is RequestFailedException or GoogleApiException or HttpRequestException)
+        {
+            logger.LogWarning(exception, "Could not delete old collection cover {BlobName}.", name);
+        }
     }
 }

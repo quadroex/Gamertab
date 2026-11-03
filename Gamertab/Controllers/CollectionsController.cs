@@ -6,6 +6,7 @@ using Gamertab.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Google;
 
 namespace Gamertab.Controllers;
 
@@ -191,7 +192,10 @@ public class CollectionsController(AppDbContext database, GameCatalog catalog, C
         }
         catch (ArgumentException exception) { ModelState.AddModelError("coverFile", exception.Message); }
         catch (InvalidOperationException exception) { ModelState.AddModelError("coverFile", exception.Message); }
-        catch (RequestFailedException) { ModelState.AddModelError("coverFile", "Image uploads are temporarily unavailable. Please try again later."); }
+        catch (Exception exception) when (exception is RequestFailedException or GoogleApiException or HttpRequestException)
+        {
+            ModelState.AddModelError("coverFile", "Image uploads are temporarily unavailable. Please try again later.");
+        }
         return false;
     }
 
