@@ -1,7 +1,8 @@
 param(
-    [ValidateSet('up', 'run', 'test', 'browser-test', 'connectivity-test', 'api-test', 'queue-test', 'blob-test', 'mcp', 'down', 'status')]
+    [ValidateSet('up', 'run', 'test', 'browser-test', 'connectivity-test', 'api-test', 'queue-test', 'blob-test', 'mcp', 'mcp-client', 'down', 'status')]
     [string]$Action = 'run',
-    [string]$AccountEmail
+    [string]$AccountEmail,
+    [switch]$Check
 )
 
 $ErrorActionPreference = 'Stop'
@@ -10,6 +11,35 @@ $projectFile = Join-Path $projectRoot 'Gamertab\Gamertab.csproj'
 $statePath = Join-Path $projectRoot '.local'
 $keepAlivePath = Join-Path $statePath 'wsl-process.json'
 $nativeDocker = Get-Command docker -ErrorAction SilentlyContinue
+
+if ($Action -eq 'mcp-client') {
+    if ([string]::IsNullOrWhiteSpace($AccountEmail)) { throw 'Specify -AccountEmail for an existing local Gamertab account.' }
+    $cliCommand = Get-Command codex.exe, codex.cmd -ErrorAction SilentlyContinue | Select-Object -First 1
+    $cliPath = if ($cliCommand) { $cliCommand.Source } else { $null }
+    if (-not $cliPath) {
+        $desktopCli = Get-ChildItem -Path (Join-Path $env:LOCALAPPDATA 'OpenAI\Codex\bin\*\codex.exe') -File -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($desktopCli) { $cliPath = $desktopCli.FullName }
+    }
+    if (-not $cliPath) { throw 'Codex CLI was not found. Install Codex CLI or the Codex desktop app, then try again.' }
+    $shellPath = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $serverArguments = @('-NoProfile', '-File', (Join-Path $projectRoot 'dev.ps1'), 'mcp', '-AccountEmail', $AccountEmail)
+    $values = @($shellPath) + $serverArguments
+    if ($values | Where-Object { $_.Contains("'''") -or $_.Contains("`n") -or $_.Contains("`r") }) { throw 'MCP launch values cannot contain line breaks or three consecutive apostrophes.' }
+    $literalArguments = $serverArguments | ForEach-Object { "'''" + $_ + "'''" }
+    $cliOptions = @(
+        '-c', ("mcp_servers.gamertab.command='''" + $shellPath + "'''"),
+        '-c', ('mcp_servers.gamertab.args=[' + ($literalArguments -join ',') + ']'),
+        '-c', 'mcp_servers.gamertab.startup_timeout_sec=120'
+    )
+    if ($Check) {
+        & $cliPath @cliOptions mcp get gamertab --json
+    }
+    else {
+        & $cliPath --cd $projectRoot @cliOptions
+    }
+    exit $LASTEXITCODE
+}
 
 if ($Action -eq 'mcp') {
     if ([string]::IsNullOrWhiteSpace($AccountEmail)) { throw 'Specify -AccountEmail for an existing Gamertab account.' }
