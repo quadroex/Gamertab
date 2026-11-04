@@ -13,6 +13,8 @@ namespace Gamertab.Tests;
 public class AssistantBackchannel : HttpMessageHandler
 {
     public List<string> Requests { get; } = [];
+    public List<string> Models { get; } = [];
+    public int HeaderTimeouts { get; set; }
     public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
     public Queue<HttpStatusCode> Statuses { get; } = new();
     public string Answer { get; set; } = "Your library is ready.";
@@ -20,9 +22,15 @@ public class AssistantBackchannel : HttpMessageHandler
     {
         var body = await request.Content!.ReadAsStringAsync(cancellationToken);
         Requests.Add(body);
+        Models.Add(request.RequestUri!.AbsolutePath);
+        if (HeaderTimeouts > 0)
+        {
+            HeaderTimeouts--;
+            throw new OperationCanceledException();
+        }
         var result = body.Contains("functionResponse")
             ? JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = Answer } } } } } })
-            : "{\"candidates\":[{\"content\":{\"parts\":[{\"functionCall\":{\"name\":\"get_library\",\"args\":{}}}]}}]}";
+            : "{\"candidates\":[{\"content\":{\"parts\":[{\"functionCall\":{\"name\":\"get_library\",\"args\":{}},\"thoughtSignature\":\"test-signature\"}]}}]}";
         return new HttpResponseMessage(Statuses.Count > 0 ? Statuses.Dequeue() : Status) { Content = new StringContent("data: " + result + "\n\n", Encoding.UTF8, "text/event-stream") };
     }
 }
@@ -77,6 +85,10 @@ public class AssistantTests
         Assert.Equal(2, factory.Backchannel.Requests.Count);
         Assert.DoesNotContain("Secret journal text", factory.Backchannel.Requests[1]);
         Assert.DoesNotContain("@example.com", factory.Backchannel.Requests[1]);
+        Assert.All(factory.Backchannel.Models, model => Assert.Contains("gemini-3.5-flash-lite", model));
+        using var request = JsonDocument.Parse(factory.Backchannel.Requests[1]);
+        Assert.Equal("minimal", request.RootElement.GetProperty("generationConfig").GetProperty("thinkingConfig").GetProperty("thinkingLevel").GetString());
+        Assert.Equal("test-signature", request.RootElement.GetProperty("contents")[1].GetProperty("parts")[0].GetProperty("thoughtSignature").GetString());
     }
 
     [Fact]
@@ -119,5 +131,35 @@ public class AssistantTests
         Assert.Contains("quota", body);
         Assert.DoesNotContain("event: done", body);
         Assert.Single(factory.Backchannel.Requests);
+    }
+
+    [Fact]
+    public async Task RepeatedOverloadStopsAfterOneRetryWithASpecificError()
+    {
+        using var factory = new AssistantFactory();
+        factory.Backchannel.Status = HttpStatusCode.ServiceUnavailable;
+        using var client = await RegisterAsync(factory);
+        var response = await client.PostAsJsonAsync("/api/assistant/chat", new { message = "Read my library" });
+        var stream = await response.Content.ReadAsStringAsync();
+        Assert.Contains("overloaded", stream);
+        Assert.Contains("event: error", stream);
+        Assert.DoesNotContain("event: done", stream);
+        Assert.Equal(2, factory.Backchannel.Requests.Count);
+    }
+
+    [Theory]
+    [InlineData(1, true, 3)]
+    [InlineData(2, false, 2)]
+    public async Task SlowProviderIsRetriedOnceWithoutAnEndlessWait(int timeouts, bool succeeds, int requests)
+    {
+        using var factory = new AssistantFactory();
+        factory.Backchannel.HeaderTimeouts = timeouts;
+        using var client = await RegisterAsync(factory);
+        var response = await client.PostAsJsonAsync("/api/assistant/chat", new { message = "Read my library" });
+        var stream = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Retrying once", stream);
+        Assert.Equal(succeeds, stream.Contains("event: done"));
+        Assert.Equal(!succeeds, stream.Contains("event: error"));
+        Assert.Equal(requests, factory.Backchannel.Requests.Count);
     }
 }
