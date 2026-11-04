@@ -13,7 +13,13 @@ namespace Gamertab.Tests;
 
 public class AppFactory : WebApplicationFactory<Program>
 {
-    private readonly SqliteConnection connection = new("Data Source=:memory:");
+    private readonly SqliteConnection connection = new(new SqliteConnectionStringBuilder
+    {
+        DataSource = $"gamertab-tests-{Guid.NewGuid():N}",
+        Mode = SqliteOpenMode.Memory,
+        Cache = SqliteCacheMode.Shared,
+        Pooling = false
+    }.ConnectionString);
     protected virtual bool GoogleEnabled => false;
     protected virtual bool IgdbEnabled => false;
 
@@ -38,7 +44,7 @@ public class AppFactory : WebApplicationFactory<Program>
             services.RemoveAll<AppDbContext>();
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection));
+            services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection.ConnectionString));
         });
     }
 
